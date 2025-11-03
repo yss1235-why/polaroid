@@ -1,11 +1,6 @@
 [build]
-  command = "bun install && bun run build"
+  command = "npm install && npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
-```
-
-**OR** update your build command in the Netlify UI to:
-```
-bun install && bun run build
