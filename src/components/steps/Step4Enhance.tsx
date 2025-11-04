@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/services/api";
+import { CropData } from "@/types";
 
 interface Step4EnhanceProps {
   originalImage: string;
   imageId: string;
   mode: "passport" | "studio";
   enhancementLevel: number;
+  cropData: CropData | null;  // NEW: Receive crop data
   onEnhancementChange: (value: number) => void;
   onEnhancementComplete: (processedImage: string) => void;
 }
@@ -20,6 +22,7 @@ const Step4Enhance = ({
   imageId,
   mode,
   enhancementLevel, 
+  cropData,  // NEW
   onEnhancementChange,
   onEnhancementComplete 
 }: Step4EnhanceProps) => {
@@ -28,8 +31,10 @@ const Step4Enhance = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    // Initial processing
-    processImage(enhancementLevel);
+    // Initial processing with default level (40% for passport, 40% for studio)
+    const defaultLevel = mode === "passport" ? 40 : 40;
+    onEnhancementChange(defaultLevel);
+    processImage(defaultLevel);
   }, []);
 
   const processImage = async (level: number) => {
@@ -40,7 +45,8 @@ const Step4Enhance = ({
         imageId,
         mode,
         level,
-        "white"
+        "white",
+        cropData || undefined  // NEW: Pass crop data to backend
       );
       
       if (response.success && response.data) {
@@ -117,7 +123,7 @@ const Step4Enhance = ({
           Adjust Enhancement
         </h2>
         <p className="text-muted-foreground text-sm md:text-base">
-          Fine-tune color and brightness to your preference
+          Fine-tune color and brightness (subtle changes only)
         </p>
       </div>
 
@@ -146,9 +152,10 @@ const Step4Enhance = ({
           Enhancement Tips:
         </h3>
         <ul className="space-y-1 text-xs md:text-sm text-muted-foreground">
-          <li>• <strong>0-30%:</strong> Natural look, minimal changes</li>
-          <li>• <strong>40-60%:</strong> Balanced enhancement (recommended)</li>
-          <li>• <strong>70-100%:</strong> Maximum brightness and color boost</li>
+          <li>• <strong>0-30%:</strong> Subtle, natural look</li>
+          <li>• <strong>30-50%:</strong> Balanced (recommended)</li>
+          <li>• <strong>50-100%:</strong> Stronger enhancement</li>
+          <li>• ✨ Only face area is enhanced for natural results</li>
         </ul>
       </div>
 
