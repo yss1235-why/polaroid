@@ -29,13 +29,13 @@ const Step3Crop = ({ imageUrl, imageId, onCropComplete }: Step3CropProps) => {
       return;
     }
 
-    // Note: Backend handles cropping automatically during processing
-    // We just pass the original image forward
+    // Pass both the image URL and crop data to next step
+    // Backend will use the crop data during processing
     onCropComplete(imageUrl, cropData);
     
     toast({
       title: "✅ Crop area set",
-      description: "Photo will be cropped during processing",
+      description: "Your crop settings will be applied during processing",
     });
   };
 
@@ -46,7 +46,7 @@ const Step3Crop = ({ imageUrl, imageId, onCropComplete }: Step3CropProps) => {
           Crop to Passport Size
         </h2>
         <p className="text-muted-foreground text-sm md:text-base">
-          Position your face in the center of the frame (3.5cm × 4.5cm)
+          Position your face in the center (3.5cm × 4.5cm standard)
         </p>
       </div>
 
@@ -61,10 +61,11 @@ const Step3Crop = ({ imageUrl, imageId, onCropComplete }: Step3CropProps) => {
           📐 Cropping Tips:
         </h3>
         <ul className="space-y-1 text-xs md:text-sm text-muted-foreground">
-          <li>• Position your face in the center of the crop area</li>
-          <li>• Use zoom controls to adjust the size</li>
-          <li>• Ensure your entire face is visible within the frame</li>
-          <li>• Leave some space above your head</li>
+          <li>• Center your face in the crop area</li>
+          <li>• Use zoom to adjust size</li>
+          <li>• Ensure entire face is visible</li>
+          <li>• Leave space above your head</li>
+          <li>• Face should be 70-80% of frame height</li>
         </ul>
       </div>
 
