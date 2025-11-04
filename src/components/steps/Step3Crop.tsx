@@ -7,13 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Step3CropProps {
   imageUrl: string;
+  imageId: string;
   onCropComplete: (croppedImage: string, cropData: CropData) => void;
 }
 
-const Step3Crop = ({ imageUrl, onCropComplete }: Step3CropProps) => {
+const Step3Crop = ({ imageUrl, imageId, onCropComplete }: Step3CropProps) => {
   const { toast } = useToast();
   const [cropData, setCropData] = useState<CropData | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleCropChange = (data: CropData) => {
     setCropData(data);
@@ -29,21 +29,14 @@ const Step3Crop = ({ imageUrl, onCropComplete }: Step3CropProps) => {
       return;
     }
 
-    setIsProcessing(true);
-
-    // Simulate cropping process
-    setTimeout(() => {
-      // In production, this would call the backend API
-      // const response = await apiService.cropPhoto(imageId, cropData);
-      
-      onCropComplete(imageUrl, cropData);
-      setIsProcessing(false);
-      
-      toast({
-        title: "✅ Photo cropped",
-        description: "Photo adjusted to passport size",
-      });
-    }, 1000);
+    // Note: Backend handles cropping automatically during processing
+    // We just pass the original image forward
+    onCropComplete(imageUrl, cropData);
+    
+    toast({
+      title: "✅ Crop area set",
+      description: "Photo will be cropped during processing",
+    });
   };
 
   return (
@@ -77,21 +70,12 @@ const Step3Crop = ({ imageUrl, onCropComplete }: Step3CropProps) => {
 
       <Button 
         onClick={handleContinue} 
-        disabled={isProcessing || !cropData}
+        disabled={!cropData}
         className="w-full gap-2"
         size="lg"
       >
-        {isProcessing ? (
-          <>
-            <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-            Processing...
-          </>
-        ) : (
-          <>
-            Continue
-            <ArrowRight className="w-5 h-5" />
-          </>
-        )}
+        Continue
+        <ArrowRight className="w-5 h-5" />
       </Button>
     </div>
   );
