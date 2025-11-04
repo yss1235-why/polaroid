@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { UploadArea } from "@/components/UploadArea";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/api";
 
 interface Step1UploadProps {
-  onUploadComplete: (imageUrl: string) => void;
+  onUploadComplete: (imageUrl: string, imageId: string) => void;
 }
 
 const Step1Upload = ({ onUploadComplete }: Step1UploadProps) => {
@@ -14,36 +15,31 @@ const Step1Upload = ({ onUploadComplete }: Step1UploadProps) => {
     setIsProcessing(true);
 
     try {
-      // Convert file to base64 URL for preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageUrl = e.target?.result as string;
+      // Call real API
+      const response = await apiService.uploadPhoto(file);
+      
+      if (response.success && response.data) {
+        // Create local URL for preview
+        const imageUrl = URL.createObjectURL(file);
         
-        // Simulate upload delay
-        setTimeout(() => {
-          setIsProcessing(false);
-          onUploadComplete(imageUrl);
-          
-          toast({
-            title: "✅ Photo uploaded",
-            description: "Ready to process your photo",
-          });
-        }, 1000);
-      };
-      reader.readAsDataURL(file);
-
-      // In production, call API here:
-      // const response = await apiService.uploadPhoto(file);
-      // if (response.success) {
-      //   onUploadComplete(response.data.imageUrl);
-      // }
+        onUploadComplete(imageUrl, response.data.image_id);
+        
+        toast({
+          title: "✅ Photo uploaded",
+          description: `Face detected: ${response.data.face_detected ? "Yes" : "No"}`,
+        });
+      } else {
+        throw new Error(response.error || "Upload failed");
+      }
     } catch (error) {
-      setIsProcessing(false);
+      console.error("Upload error:", error);
       toast({
         title: "Upload failed",
-        description: "Please try again",
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
