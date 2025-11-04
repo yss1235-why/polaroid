@@ -10,7 +10,7 @@ import {
 // Get API URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-console.log("API Base URL:", API_BASE_URL); // For debugging
+console.log("API Base URL:", API_BASE_URL);
 
 class ApiService {
   private async request<T>(
@@ -19,7 +19,7 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
-      console.log("API Request:", url); // Debug log
+      console.log("API Request:", url);
       
       const response = await fetch(url, {
         ...options,
@@ -61,7 +61,8 @@ class ApiService {
     imageId: string,
     mode: ProcessingMode,
     enhanceLevel: number,
-    background: string = "white"
+    background: string = "white",
+    cropData?: CropData  // NEW: Optional crop data
   ): Promise<ApiResponse<ProcessResponse>> {
     return this.request<ProcessResponse>("/process", {
       method: "POST",
@@ -74,6 +75,7 @@ class ApiService {
         enhance_level: enhanceLevel / 100,
         background,
         crop_face: true,
+        crop_data: cropData,  // NEW: Send crop data
       }),
     });
   }
