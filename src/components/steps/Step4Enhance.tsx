@@ -4,16 +4,21 @@ import { CorrectionSlider } from "@/components/CorrectionSlider";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/api";
 
 interface Step4EnhanceProps {
   originalImage: string;
+  imageId: string;
+  mode: "passport" | "studio";
   enhancementLevel: number;
   onEnhancementChange: (value: number) => void;
   onEnhancementComplete: (processedImage: string) => void;
 }
 
 const Step4Enhance = ({ 
-  originalImage, 
+  originalImage,
+  imageId,
+  mode,
   enhancementLevel, 
   onEnhancementChange,
   onEnhancementComplete 
@@ -30,27 +35,69 @@ const Step4Enhance = ({
   const processImage = async (level: number) => {
     setIsProcessing(true);
     
-    // Simulate processing delay
-    setTimeout(() => {
-      // In production, this would call the actual backend API
-      // const response = await apiService.adjustEnhancement(imageId, level);
+    try {
+      const response = await apiService.processPhoto(
+        imageId,
+        mode,
+        level,
+        "white"
+      );
       
-      // For demo, use original image
-      setProcessedImage(originalImage);
+      if (response.success && response.data) {
+        setProcessedImage(response.data.processed_image);
+        toast({
+          title: "✅ Processing complete",
+          description: `Face confidence: ${(response.data.face_confidence * 100).toFixed(0)}%`,
+        });
+      } else {
+        throw new Error(response.error || "Processing failed");
+      }
+    } catch (error) {
+      console.error("Processing error:", error);
+      toast({
+        title: "Processing failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
       setIsProcessing(false);
-    }, 1500);
+    }
   };
 
   const handleSliderChange = (value: number) => {
     onEnhancementChange(value);
   };
 
-  const handleReprocess = () => {
-    processImage(enhancementLevel);
+  const handleReprocess = async () => {
     toast({
       title: "Reprocessing...",
       description: `Applying ${enhancementLevel}% enhancement`,
     });
+    
+    setIsProcessing(true);
+    
+    try {
+      const response = await apiService.adjustEnhancement(imageId, enhancementLevel);
+      
+      if (response.success && response.data) {
+        setProcessedImage(response.data.processed_image);
+        toast({
+          title: "✅ Reprocessing complete",
+          description: "Enhancement level updated",
+        });
+      } else {
+        throw new Error(response.error || "Reprocessing failed");
+      }
+    } catch (error) {
+      console.error("Reprocessing error:", error);
+      toast({
+        title: "Reprocessing failed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleContinue = () => {
@@ -80,15 +127,17 @@ const Step4Enhance = ({
         processedImage={processedImage}
       />
 
-      {/* Enhancement Slider */}
-      <div className="max-w-2xl mx-auto">
-        <CorrectionSlider
-          value={enhancementLevel}
-          onChange={handleSliderChange}
-          disabled={isProcessing}
-          label="Enhancement Strength"
-        />
-      </div>
+      {/* Enhancement Slider - Only in Studio Mode */}
+      {mode === "studio" && (
+        <div className="max-w-2xl mx-auto">
+          <CorrectionSlider
+            value={enhancementLevel}
+            onChange={handleSliderChange}
+            disabled={isProcessing}
+            label="Enhancement Strength"
+          />
+        </div>
+      )}
 
       {/* Info Card */}
       <div className="bg-muted/50 rounded-lg p-4 border border-border max-w-2xl mx-auto">
@@ -105,16 +154,18 @@ const Step4Enhance = ({
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
-        <Button
-          onClick={handleReprocess}
-          disabled={isProcessing}
-          variant="outline"
-          className="flex-1 gap-2"
-          size="lg"
-        >
-          <RefreshCw className={`w-5 h-5 ${isProcessing ? 'animate-spin' : ''}`} />
-          Reprocess
-        </Button>
+        {mode === "studio" && (
+          <Button
+            onClick={handleReprocess}
+            disabled={isProcessing}
+            variant="outline"
+            className="flex-1 gap-2"
+            size="lg"
+          >
+            <RefreshCw className={`w-5 h-5 ${isProcessing ? 'animate-spin' : ''}`} />
+            Reprocess
+          </Button>
+        )}
         <Button
           onClick={handleContinue}
           disabled={isProcessing || !processedImage}
