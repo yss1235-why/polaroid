@@ -1,3 +1,5 @@
+// src/components/CropTool.tsx
+
 import { useState, useRef, useEffect } from "react";
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,15 +19,19 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // ✅ NEW: Track natural image dimensions
+  const [naturalDimensions, setNaturalDimensions] = useState({ width: 0, height: 0 });
 
   // Passport photo aspect ratio: 3.5cm x 4.5cm = 0.7778 (width/height)
   const CROP_ASPECT_RATIO = 3.5 / 4.5;
 
+  // ✅ UPDATED: Calculate and send normalized crop data
   useEffect(() => {
-    if (imageLoaded) {
+    if (imageLoaded && naturalDimensions.width > 0) {
       updateCropData();
     }
-  }, [zoom, position, imageLoaded]);
+  }, [zoom, position, imageLoaded, naturalDimensions]);
 
   const updateCropData = () => {
     if (!containerRef.current || !imageRef.current) return;
@@ -33,20 +39,81 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
     const container = containerRef.current.getBoundingClientRect();
     const image = imageRef.current;
     
-    // Calculate crop area dimensions
+    // Get display dimensions
+    const displayWidth = image.offsetWidth;
+    const displayHeight = image.offsetHeight;
+    
+    // Calculate crop area dimensions (in display pixels)
     const cropHeight = container.height * 0.7; // 70% of container
     const cropWidth = cropHeight * CROP_ASPECT_RATIO;
-
-    // Calculate crop position relative to image
+    
+    // Calculate center of container
+    const containerCenterX = container.width / 2;
+    const containerCenterY = container.height / 2;
+    
+    // Calculate crop area center in display coordinates
+    const cropCenterX = containerCenterX;
+    const cropCenterY = containerCenterY;
+    
+    // Calculate image position relative to container after zoom and pan
+    const imageLeft = containerCenterX + position.x - (displayWidth * zoom) / 2;
+    const imageTop = containerCenterY + position.y - (displayHeight * zoom) / 2;
+    
+    // Calculate crop area position relative to zoomed image
+    const cropLeftOnImage = (cropCenterX - cropWidth / 2 - imageLeft) / zoom;
+    const cropTopOnImage = (cropCenterY - cropHeight / 2 - imageTop) / zoom;
+    const cropWidthOnImage = cropWidth / zoom;
+    const cropHeightOnImage = cropHeight / zoom;
+    
+    // ✅ HYBRID APPROACH: Convert to normalized coordinates (0-1)
+    const normalizedX = cropLeftOnImage / displayWidth;
+    const normalizedY = cropTopOnImage / displayHeight;
+    const normalizedWidth = cropWidthOnImage / displayWidth;
+    const normalizedHeight = cropHeightOnImage / displayHeight;
+    
     const cropData: CropData = {
-      x: position.x,
-      y: position.y,
-      width: cropWidth,
-      height: cropHeight,
+      // Normalized coordinates (0-1) - MAIN DATA
+      x: normalizedX,
+      y: normalizedY,
+      width: normalizedWidth,
+      height: normalizedHeight,
+      
+      // Display dimensions (for debugging)
+      displayWidth: displayWidth,
+      displayHeight: displayHeight,
+      
+      // Natural dimensions (CRITICAL for backend)
+      naturalWidth: naturalDimensions.width,
+      naturalHeight: naturalDimensions.height,
+      
+      // Transform
       zoom: zoom,
     };
 
+    console.log("📐 Crop Data (Hybrid):", {
+      normalized: { x: normalizedX, y: normalizedY, w: normalizedWidth, h: normalizedHeight },
+      display: { w: displayWidth, h: displayHeight },
+      natural: { w: naturalDimensions.width, h: naturalDimensions.height },
+      zoom: zoom
+    });
+
     onCropChange(cropData);
+  };
+
+  // ✅ NEW: Capture natural dimensions when image loads
+  const handleImageLoad = () => {
+    if (imageRef.current) {
+      setNaturalDimensions({
+        width: imageRef.current.naturalWidth,
+        height: imageRef.current.naturalHeight
+      });
+      setImageLoaded(true);
+      
+      console.log("✅ Image loaded:", {
+        natural: `${imageRef.current.naturalWidth}x${imageRef.current.naturalHeight}`,
+        display: `${imageRef.current.offsetWidth}x${imageRef.current.offsetHeight}`
+      });
+    }
   };
 
   const handleZoomIn = () => {
@@ -137,7 +204,7 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
             alt="Crop preview"
             className="max-w-full max-h-full object-contain select-none pointer-events-none"
             draggable={false}
-            onLoad={() => setImageLoaded(true)}
+            onLoad={handleImageLoad}
           />
         </div>
 
@@ -170,7 +237,7 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
 
           {/* Instruction overlay */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full text-xs md:text-sm font-medium">
-            Drag to position • Pinch to zoom
+            {!imageLoaded ? "Loading..." : "Drag to position • Pinch to zoom"}
           </div>
         </div>
       </div>
@@ -209,6 +276,13 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
           <span className="hidden sm:inline">Reset</span>
         </Button>
       </div>
+
+      {/* Debug info (optional - remove in production) */}
+      {imageLoaded && (
+        <div className="text-xs text-muted-foreground text-center bg-muted/50 rounded p-2">
+          Natural: {naturalDimensions.width}×{naturalDimensions.height}px
+        </div>
+      )}
     </div>
   );
 };
