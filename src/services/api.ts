@@ -7,10 +7,7 @@ import {
   ProcessingMode 
 } from "@/types";
 
-// Get API URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-console.log("API Base URL:", API_BASE_URL);
 
 class ApiService {
   private async request<T>(
@@ -50,7 +47,6 @@ class ApiService {
   async uploadPhoto(file: File): Promise<ApiResponse<UploadResponse>> {
     const formData = new FormData();
     formData.append("file", file);
-
     return this.request<UploadResponse>("/upload", {
       method: "POST",
       body: formData,
@@ -145,11 +141,10 @@ class ApiService {
     });
   }
 
-
+  // ✅ ONLY print method needed - no printer listing!
   async printSheet(
     imageId: string,
     layout: "3x4" | "2x3",
-    printerName?: string,
     copies: number = 1
   ): Promise<ApiResponse<{ 
     job_id: string; 
@@ -165,18 +160,9 @@ class ApiService {
       body: JSON.stringify({
         image_id: imageId,
         layout,
-        printer: printerName || null,
+        printer: null,  // ✅ Let backend auto-select
         copies,
       }),
-    });
-  }
-
-  async getPrinterStatus(printerName: string): Promise<ApiResponse<{
-    status: string;
-    jobs_count: number;
-  }>> {
-    return this.request(`/printer-status/${encodeURIComponent(printerName)}`, {
-      method: "GET",
     });
   }
 
