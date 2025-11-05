@@ -1,23 +1,17 @@
 // src/services/cloudinary.ts
 
-import { ApiResponse, UploadResponse, ProcessResponse } from "@/types";
+import { ApiResponse, ProcessResponse, UploadResponse, CropData } from "@/types";
 
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-/**
- * Cloudinary-first processing service.
- * Attempts Cloudinary processing first, falls back to Python if needed.
- */
 class CloudinaryService {
-  private useCloudinary: boolean = true;
+  private cloudName = CLOUDINARY_CLOUD_NAME;
+  private uploadPreset = CLOUDINARY_UPLOAD_PRESET;
 
-  /**
-   * Upload image to Cloudinary
-   */
-  async uploadImage(file: File): Promise<ApiResponse<UploadResponse & { source: string }>> {
+  async uploadImage(file: File): Promise<ApiResponse<UploadResponse>> {
     try {
-      console.log("📤 Attempting Cloudinary upload...");
-
       const formData = new FormData();
       formData.append("file", file);
 
@@ -27,28 +21,24 @@ class CloudinaryService {
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Upload failed: ${error}`);
+        throw new Error(`Upload failed: ${response.statusText}`);
       }
 
       const data = await response.json();
-
-      console.log("✅ Cloudinary upload successful:", data.image_id);
 
       return {
         success: true,
         data: {
           image_id: data.image_id,
+          status: data.status,
           face_detected: data.face_detected,
+          face_confidence: data.face_confidence || 0,
           dimensions: data.dimensions,
-          status: "received",
           source: "cloudinary",
-          cloudinary_url: data.cloudinary_url,
-          thumbnail_url: data.thumbnail_url,
         },
       };
     } catch (error) {
-      console.error("❌ Cloudinary upload failed:", error);
+      console.error("Cloudinary upload error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Upload failed",
@@ -56,18 +46,11 @@ class CloudinaryService {
     }
   }
 
-  /**
-   * Process image with Cloudinary transformations
-   */
   async processImage(
     imageId: string,
-    mode: "passport" | "studio",
-    enhanceLevel: number = 0.40,
-    cropData?: any
-  ): Promise<ApiResponse<ProcessResponse & { source: string }>> {
+    cropData?: CropData
+  ): Promise<ApiResponse<ProcessResponse>> {
     try {
-      console.log("🎨 Processing with Cloudinary:", imageId);
-
       const response = await fetch(`${API_BASE_URL}/process-cloudinary`, {
         method: "POST",
         headers: {
@@ -75,35 +58,30 @@ class CloudinaryService {
         },
         body: JSON.stringify({
           image_id: imageId,
-          mode: mode,
-          enhance_level: enhanceLevel,
-          background: "white",
           crop_data: cropData,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Processing failed: ${error}`);
+        throw new Error(`Processing failed: ${response.statusText}`);
       }
 
       const data = await response.json();
 
-      console.log("✅ Cloudinary processing complete");
-
       return {
         success: true,
         data: {
-          processed_image: data.processed_image,
+          image_id: data.image_id,
+          processed_image: data.after_image,
+          before_image: data.before_image,
+          after_image: data.after_image,
           face_confidence: data.face_confidence,
           bg_removed: data.bg_removed,
-          status: "success",
           source: "cloudinary",
-          processed_url: data.processed_url,
         },
       };
     } catch (error) {
-      console.error("❌ Cloudinary processing failed:", error);
+      console.error("Cloudinary processing error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Processing failed",
@@ -111,56 +89,19 @@ class CloudinaryService {
     }
   }
 
-  /**
-   * Check Cloudinary quota/usage
-   */
-  async checkQuota(): Promise<{
-    transformations: number;
-    transformations_limit: number;
-    usage_percent: number;
-  } | null> {
+  async checkQuota() {
     try {
       const response = await fetch(`${API_BASE_URL}/cloudinary-quota`);
-
+      
       if (!response.ok) {
-        return null;
+        throw new Error("Quota check failed");
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error("❌ Quota check failed:", error);
+      console.error("Quota check error:", error);
       return null;
     }
-  }
-
-  /**
-   * Get direct Cloudinary transformation URL
-   * (useful for previews without re-downloading)
-   */
-  getTransformationUrl(
-    publicId: string,
-    mode: "passport" | "studio" = "passport",
-    enhanceLevel: number = 0.40
-  ): string {
-    const cloudName = "ddo4o6naz";
-    const width = 413; // 3.5cm at 300dpi
-    const height = 531; // 4.5cm at 300dpi
-
-    const enhance = Math.round(enhanceLevel * 100);
-
-    // Build transformation string
-    const transforms = [
-      "e_background_removal",
-      "b_white",
-      `w_${width},h_${height},c_thumb,g_face,z_0.75`,
-      mode === "passport"
-        ? "e_auto_brightness,e_auto_contrast,e_auto_color,e_sharpen:80"
-        : `e_auto_brightness:${enhance},e_auto_contrast:${enhance},e_auto_color:${enhance},e_sharpen:${Math.min(100, enhance + 20)}`,
-      "q_100,f_png",
-    ].join("/");
-
-    return `https://res.cloudinary.com/${cloudName}/image/upload/${transforms}/${publicId}`;
   }
 }
 
