@@ -119,8 +119,20 @@ class ApiService {
   async downloadSheet(
     imageId: string,
     layout: "3x4" | "2x3"
-  ): Promise<ApiResponse<{ file: string; filename: string; size_bytes: number; dimensions: string; dpi: number }>> {
-    return this.request<{ file: string; filename: string; size_bytes: number; dimensions: string; dpi: number }>("/download", {
+  ): Promise<ApiResponse<{ 
+    file: string; 
+    filename: string; 
+    size_bytes: number; 
+    dimensions: string; 
+    dpi: number 
+  }>> {
+    return this.request<{ 
+      file: string; 
+      filename: string; 
+      size_bytes: number; 
+      dimensions: string; 
+      dpi: number 
+    }>("/download", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -130,6 +142,55 @@ class ApiService {
         layout,
         format: "png",
       }),
+    });
+  }
+
+  async listPrinters(): Promise<ApiResponse<{
+    printers: Array<{
+      name: string;
+      is_default: boolean;
+      status: string;
+      supports_color: boolean;
+    }>;
+    default_printer: string | null;
+    os_type: string;
+  }>> {
+    return this.request("/printers", {
+      method: "GET",
+    });
+  }
+
+  async printSheet(
+    imageId: string,
+    layout: "3x4" | "2x3",
+    printerName?: string,
+    copies: number = 1
+  ): Promise<ApiResponse<{ 
+    job_id: string; 
+    printer: string; 
+    message: string;
+    settings: any;
+  }>> {
+    return this.request("/print", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        image_id: imageId,
+        layout,
+        printer: printerName || null,
+        copies,
+      }),
+    });
+  }
+
+  async getPrinterStatus(printerName: string): Promise<ApiResponse<{
+    status: string;
+    jobs_count: number;
+  }>> {
+    return this.request(`/printer-status/${encodeURIComponent(printerName)}`, {
+      method: "GET",
     });
   }
 
