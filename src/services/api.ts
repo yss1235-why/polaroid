@@ -62,7 +62,7 @@ class ApiService {
     mode: ProcessingMode,
     enhanceLevel: number,
     background: string = "white",
-    cropData?: CropData  // NEW: Optional crop data
+    cropData?: CropData
   ): Promise<ApiResponse<ProcessResponse>> {
     return this.request<ProcessResponse>("/process", {
       method: "POST",
@@ -75,7 +75,7 @@ class ApiService {
         enhance_level: enhanceLevel / 100,
         background,
         crop_face: true,
-        crop_data: cropData,  // NEW: Send crop data
+        crop_data: cropData,
       }),
     });
   }
@@ -119,8 +119,8 @@ class ApiService {
   async downloadSheet(
     imageId: string,
     layout: "3x4" | "2x3"
-  ): Promise<ApiResponse<{ file: string; filename: string }>> {
-    return this.request<{ file: string; filename: string }>("/download", {
+  ): Promise<ApiResponse<{ file: string; filename: string; size_bytes: number; dimensions: string; dpi: number }>> {
+    return this.request<{ file: string; filename: string; size_bytes: number; dimensions: string; dpi: number }>("/download", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
