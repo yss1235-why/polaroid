@@ -7,7 +7,7 @@ interface Step4ProcessingProps {
   originalImage: string;
   imageId: string;
   cropData: CropData | null;
-  onProcessingComplete: (beforeImage: string, afterImage: string) => void;
+  onProcessingComplete: (beforeImage: string, afterImage: string, processedImageId: string) => void;
 }
 
 const Step4Processing = ({ 
@@ -50,6 +50,10 @@ const Step4Processing = ({
     }, 300);
 
     try {
+      console.log("🎨 Starting image processing...");
+      console.log(`   Image ID: ${imageId}`);
+      console.log(`   Crop data:`, cropData);
+      
       // Process with passport mode (40% enhancement) - no parameters needed
       const response = await apiService.processPhoto(
         imageId,
@@ -61,24 +65,61 @@ const Step4Processing = ({
       setStatusMessage("Complete!");
       
       if (response.success && response.data) {
+        console.log("✅ Processing successful");
+        console.log(`   Response:`, response.data);
+        
+        // CRITICAL FIX: Extract images and processed ID from response
         const beforeImage = response.data.before_image || response.data.processed_image;
         const afterImage = response.data.after_image || response.data.processed_image;
         
+        // CRITICAL FIX: Use the standardized image_id from response
+        // This ensures the preview/print steps use the correct file
+        const processedImageId = response.data.image_id || imageId;
+        
+        console.log("📋 Processing complete:");
+        console.log(`   Original ID: ${imageId}`);
+        console.log(`   Processed ID: ${processedImageId}`);
+        console.log(`   Before image: ${beforeImage ? beforeImage.substring(0, 50) + '...' : 'none'}`);
+        console.log(`   After image: ${afterImage ? afterImage.substring(0, 50) + '...' : 'none'}`);
+        
+        // Validate we have both images
+        if (!beforeImage || !afterImage) {
+          throw new Error("Missing before or after image in response");
+        }
+        
+        // CRITICAL FIX: Validate the processed ID exists
+        if (!processedImageId) {
+          throw new Error("No processed image ID returned from server");
+        }
+        
         // Wait 500ms before showing results
         setTimeout(() => {
-          onProcessingComplete(beforeImage, afterImage);
+          onProcessingComplete(beforeImage, afterImage, processedImageId);
         }, 500);
       } else {
         throw new Error(response.error || "Processing failed");
       }
     } catch (error) {
       clearInterval(progressInterval);
-      console.error("Processing error:", error);
+      console.error("❌ Processing error:", error);
+      
+      // Show detailed error message
+      let errorMessage = "Please try again";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Processing failed",
-        description: error instanceof Error ? error.message : "Please try again",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Log detailed error info for debugging
+      console.error("Detailed error info:");
+      console.error(`   Image ID: ${imageId}`);
+      console.error(`   Crop data:`, cropData);
+      console.error(`   Error:`, error);
     }
   };
 
