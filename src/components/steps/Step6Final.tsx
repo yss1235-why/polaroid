@@ -64,76 +64,7 @@ const Step6Final = ({
         });
         onPrint();
       } else {
-        // Try download and print
-        const downloadResponse = await apiService.downloadSheet(imageId, apiLayout);
-        
-        if (downloadResponse.success && downloadResponse.data) {
-          const printWindow = window.open("", "_blank");
-          if (printWindow) {
-            const paperWidth = layout === "standard" ? "6in" : "4in";
-            const paperHeight = layout === "standard" ? "4in" : "6in";
-            
-            printWindow.document.write(`
-              <html>
-                <head>
-                  <title>Print Passport Photo Sheet</title>
-                  <style>
-                    @page {
-                      size: ${paperWidth} ${paperHeight};
-                      margin: 0;
-                    }
-                    @media print {
-                      body { 
-                        margin: 0; 
-                        padding: 0;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                      }
-                      img { 
-                        width: ${paperWidth};
-                        height: ${paperHeight};
-                        object-fit: contain;
-                        display: block;
-                      }
-                    }
-                    body {
-                      margin: 0;
-                      padding: 20px;
-                      display: flex;
-                      justify-content: center;
-                      align-items: center;
-                      min-height: 100vh;
-                      background: #f5f5f5;
-                    }
-                    img {
-                      max-width: 100%;
-                      height: auto;
-                      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    }
-                  </style>
-                </head>
-                <body>
-                  <img src="${downloadResponse.data.file}" alt="Passport Photo Sheet" />
-                  <script>
-                    window.onload = function() {
-                      setTimeout(function() {
-                        window.print();
-                      }, 500);
-                    }
-                  </script>
-                </body>
-              </html>
-            `);
-            printWindow.document.close();
-          }
-          
-          toast({
-            title: "✅ Opening print dialog",
-            description: "Print dialog opened",
-          });
-        }
+        throw new Error(response.error || "Print job failed");
       }
     } catch (error) {
       console.error("Print error:", error);
