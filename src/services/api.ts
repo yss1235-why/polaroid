@@ -1,22 +1,8 @@
-// src/services/api.ts - Hybrid Cloudinary + Python Service
+import { ApiResponse, PrintRequest, PrintResponse, PrinterStatus } from "@/types";
 
-import { 
-  ApiResponse, 
-  UploadResponse, 
-  ProcessResponse, 
-  SheetPreviewResponse, 
-  CropData
-} from "@/types";
-import { cloudinaryService } from "./cloudinary";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const USE_CLOUDINARY = import.meta.env.VITE_USE_CLOUDINARY !== "false";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 class ApiService {
-  private cloudinaryEnabled = USE_CLOUDINARY;
-  private cloudinaryFallbackCount = 0;
-  private maxCloudinaryAttempts = 3;
-
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -28,6 +14,7 @@ class ApiService {
       const response = await fetch(url, {
         ...options,
         headers: {
+          'Content-Type': 'application/json',
           ...options.headers,
         },
       });
@@ -52,163 +39,53 @@ class ApiService {
   }
 
   /**
-   * Upload photo - Cloudinary primary, Python fallback
+   * Submit print job to Raspberry Pi
    */
-  async uploadPhoto(file: File): Promise<ApiResponse<UploadResponse>> {
-    // Try Cloudinary first
-    if (this.cloudinaryEnabled && this.cloudinaryFallbackCount < this.maxCloudinaryAttempts) {
-      console.log("📤 Attempting Cloudinary upload (primary)...");
-      
-      const cloudinaryResult = await cloudinaryService.uploadImage(file);
-      
-      if (cloudinaryResult.success) {
-        console.log("✅ Cloudinary upload successful");
-        this.cloudinaryFallbackCount = 0;
-        return cloudinaryResult as ApiResponse<UploadResponse>;
-      }
-      
-      this.cloudinaryFallbackCount++;
-      console.warn(`⚠️ Cloudinary failed (${this.cloudinaryFallbackCount}/${this.maxCloudinaryAttempts}), trying Python...`);
-    }
-
-    // Python fallback
-    console.log("🔄 Using Python backend upload (fallback)...");
-    const formData = new FormData();
-    formData.append("file", file);
-    
-    const result = await this.request<UploadResponse>("/upload", {
+  async printSheet(sheetUrl: string, copies: number = 1): Promise<ApiResponse<PrintResponse>> {
+    return this.request<PrintResponse>("/print", {
       method: "POST",
-      body: formData,
-    });
-
-    if (result.success && result.data) {
-      (result.data as any).source = "python";
-    }
-
-    return result;
-  }
-
-  /**
-   * Process photo - Cloudinary primary, Python fallback
-   * Always uses passport mode with 40% enhancement (no parameters needed)
-   */
-  async processPhoto(
-    imageId: string,
-    cropData?: CropData
-  ): Promise<ApiResponse<ProcessResponse>> {
-    const isCloudinaryImage = !imageId.startsWith("img_");
-
-    // Try Cloudinary if image is from Cloudinary
-    if (this.cloudinaryEnabled && isCloudinaryImage && this.cloudinaryFallbackCount < this.maxCloudinaryAttempts) {
-      console.log("🎨 Attempting Cloudinary processing (passport mode, 40% enhancement)...");
-      
-      const cloudinaryResult = await cloudinaryService.processImage(
-        imageId,
-        cropData
-      );
-      
-      if (cloudinaryResult.success) {
-        console.log("✅ Cloudinary processing successful");
-        this.cloudinaryFallbackCount = 0;
-        return cloudinaryResult as ApiResponse<ProcessResponse>;
-      }
-      
-      this.cloudinaryFallbackCount++;
-      console.warn(`⚠️ Cloudinary processing failed (${this.cloudinaryFallbackCount}/${this.maxCloudinaryAttempts}), trying Python...`);
-    }
-
-    // Python fallback
-    console.log("🔄 Using Python backend processing (fallback)...");
-    const result = await this.request<ProcessResponse>("/process", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
-        image_id: imageId,
-        crop_data: cropData,
-      }),
-    });
-
-    if (result.success && result.data) {
-      (result.data as any).source = "python";
-    }
-
-    return result;
-  }
-
-  /**
-   * Preview sheet - Works with both Cloudinary and Python images
-   */
-  async previewSheet(
-    imageId: string,
-    layout: "3x4" | "2x3",
-    paper: string = "4x6",
-    dpi: number = 300
-  ): Promise<ApiResponse<SheetPreviewResponse>> {
-    return this.request<SheetPreviewResponse>("/preview-sheet", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        image_id: imageId,
-        layout,
-        paper,
-        dpi,
-      }),
-    });
-  }
-
-  /**
-   * Download sheet
-   */
-  async downloadSheet(
-    imageId: string,
-    layout: "3x4" | "2x3"
-  ): Promise<ApiResponse<{ 
-    file: string; 
-    filename: string; 
-    size_bytes: number; 
-    dimensions: string; 
-    dpi: number 
-  }>> {
-    return this.request("/download", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        image_id: imageId,
-        layout,
-        format: "png",
-      }),
-    });
-  }
-
-  /**
-   * Print sheet
-   */
-  async printSheet(
-    imageId: string,
-    layout: "3x4" | "2x3",
-    copies: number = 1
-  ): Promise<ApiResponse<{ 
-    job_id: string; 
-    printer: string; 
-    message: string;
-    settings: any;
-  }>> {
-    return this.request("/print", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        image_id: imageId,
-        layout,
-        printer: null,
+        sheet_url: sheetUrl,
         copies,
+      }),
+    });
+  }
+
+  /**
+   * Check print job status
+   */
+  async getPrintStatus(jobId: string): Promise<ApiResponse<PrintResponse>> {
+    return this.request<PrintResponse>(`/print-status/${jobId}`, {
+      method: "GET",
+    });
+  }
+
+  /**
+   * Get printer status
+   */
+  async getPrinterStatus(): Promise<ApiResponse<PrinterStatus>> {
+    return this.request<PrinterStatus>("/printer-status", {
+      method: "GET",
+    });
+  }
+
+  /**
+   * List available printers
+   */
+  async listPrinters(): Promise<ApiResponse<PrinterStatus[]>> {
+    return this.request<PrinterStatus[]>("/printers", {
+      method: "GET",
+    });
+  }
+
+  /**
+   * Select printer
+   */
+  async selectPrinter(printerName: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>("/select-printer", {
+      method: "POST",
+      body: JSON.stringify({
+        printer_name: printerName,
       }),
     });
   }
@@ -220,24 +97,6 @@ class ApiService {
     return this.request<{ status: string }>("/health", {
       method: "GET",
     });
-  }
-
-  /**
-   * Check Cloudinary quota
-   */
-  async checkCloudinaryQuota() {
-    return await cloudinaryService.checkQuota();
-  }
-
-  /**
-   * Get processing source info
-   */
-  getProcessingInfo() {
-    return {
-      cloudinaryEnabled: this.cloudinaryEnabled,
-      cloudinaryFallbackCount: this.cloudinaryFallbackCount,
-      usingPythonFallback: this.cloudinaryFallbackCount >= this.maxCloudinaryAttempts
-    };
   }
 }
 
