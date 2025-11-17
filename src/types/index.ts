@@ -9,9 +9,12 @@ export interface PhotoData {
   secondImageId?: string;
   secondOriginal?: string | null;
   secondProcessed?: string | null;
-  // NEW: Add cropped-only URLs for before/after comparison
+  // Cropped-only URLs (no enhancements) for before comparison
   croppedOnly?: string | null;
   secondCroppedOnly?: string | null;
+  // NEW: Enhanced photos (with filters but no Polaroid frame) for after comparison
+  enhancedOnly?: string | null;
+  secondEnhancedOnly?: string | null;
 }
 
 export interface CropData {
