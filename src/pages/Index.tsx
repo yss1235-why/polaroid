@@ -3,12 +3,13 @@ import { Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Step1Upload from "@/components/steps/Step1Upload";
 import Step2Crop from "@/components/steps/Step2Crop";
-import Step3Layout from "@/components/steps/Step3Layout";
+import Step3Filter from "@/components/steps/Step3Filter";
+import Step3_5Text from "@/components/steps/Step3_5Text";
 import Step4Processing from "@/components/steps/Step4Processing";
 import Step5BeforeAfter from "@/components/steps/Step5BeforeAfter";
 import Step6Final from "@/components/steps/Step6Final";
 import StepNavigation from "@/components/StepNavigation";
-import { PhotoData, CropData } from "@/types";
+import { PhotoData, CropData, RotationData, FilterType, TextOverlay } from "@/types";
 
 const Index = () => {
   const { toast } = useToast();
@@ -19,14 +20,24 @@ const Index = () => {
     cropped: null,
     final: null,
     imageId: undefined,
+    secondImageId: undefined,
+    secondOriginal: null,
+    secondProcessed: null,
   });
+
+  // Processing data
   const [cropData, setCropData] = useState<CropData | null>(null);
-  const [selectedLayout, setSelectedLayout] = useState<"standard" | "custom">("standard");
+  const [rotation, setRotation] = useState<RotationData>({ angle: 0 });
+  const [filter, setFilter] = useState<FilterType | null>(null);
+  const [textOverlay, setTextOverlay] = useState<TextOverlay | null>(null);
 
-  // ADDED: Track the processed image ID separately
-  const [processedImageId, setProcessedImageId] = useState<string | undefined>(undefined);
+  // Second photo data (for dual mode)
+  const [secondCropData, setSecondCropData] = useState<CropData | null>(null);
+  const [secondRotation, setSecondRotation] = useState<RotationData>({ angle: 0 });
+  const [secondFilter, setSecondFilter] = useState<FilterType | null>(null);
+  const [secondTextOverlay, setSecondTextOverlay] = useState<TextOverlay | null>(null);
 
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -41,7 +52,7 @@ const Index = () => {
   };
 
   const handleRetake = () => {
-    console.log("🔄 Retaking photo, resetting all state");
+    console.log("🔄 Starting over");
     setCurrentStep(1);
     setPhotoData({
       original: null,
@@ -49,58 +60,103 @@ const Index = () => {
       cropped: null,
       final: null,
       imageId: undefined,
+      secondImageId: undefined,
+      secondOriginal: null,
+      secondProcessed: null,
     });
     setCropData(null);
-    setSelectedLayout("standard");
-    setProcessedImageId(undefined);
+    setRotation({ angle: 0 });
+    setFilter(null);
+    setTextOverlay(null);
+    setSecondCropData(null);
+    setSecondRotation({ angle: 0 });
+    setSecondFilter(null);
+    setSecondTextOverlay(null);
   };
 
-  const handleUploadComplete = (imageUrl: string, imageId: string) => {
-    console.log("📤 Upload complete:");
-    console.log(`   Image ID: ${imageId}`);
-    console.log(`   Image URL: ${imageUrl.substring(0, 50)}...`);
-    
-    setPhotoData({ ...photoData, original: imageUrl, imageId });
-    handleNext();
-  };
+  // Step 1: Upload
+  const handleUploadComplete = (
+    imageUrl: string,
+    imageId: string,
+    secondImageUrl?: string,
+    secondImageId?: string
+  ) => {
+    console.log("📤 Upload complete");
+    console.log("Image ID:", imageId);
+    if (secondImageId) {
+      console.log("Second Image ID:", secondImageId);
+    }
 
-  const handleCropComplete = (croppedImage: string, cropCoords: CropData) => {
-    console.log("✂️ Crop complete:");
-    console.log(`   Crop data:`, cropCoords);
-    
-    setPhotoData({ ...photoData, cropped: croppedImage });
-    setCropData(cropCoords);
-    handleNext();
-  };
-
-  const handleLayoutSelect = (layout: "standard" | "custom") => {
-    console.log(`📐 Layout selected: ${layout}`);
-    setSelectedLayout(layout);
-    handleNext();
-  };
-
-  const handleProcessingComplete = (beforeImage: string, afterImage: string, newProcessedImageId: string) => {
-    console.log("✅ Processing complete:");
-    console.log(`   Original ID: ${photoData.imageId}`);
-    console.log(`   Processed ID: ${newProcessedImageId}`);
-    console.log(`   Before image: ${beforeImage.substring(0, 50)}...`);
-    console.log(`   After image: ${afterImage.substring(0, 50)}...`);
-    
-    // CRITICAL FIX: Update both the processed image AND the processed ID
-    setPhotoData({ 
-      ...photoData, 
-      processed: afterImage,
-      cropped: beforeImage // Store before image as cropped for comparison
+    setPhotoData({
+      ...photoData,
+      original: imageUrl,
+      imageId,
+      secondOriginal: secondImageUrl || null,
+      secondImageId: secondImageId || undefined,
     });
-    setProcessedImageId(newProcessedImageId);
-    
     handleNext();
   };
 
+  // Step 2: Crop & Rotate
+  const handleCropComplete = (
+    crop: CropData,
+    rot: RotationData,
+    secondCrop?: CropData,
+    secondRot?: RotationData
+  ) => {
+    console.log("✂️ Crop complete");
+    setCropData(crop);
+    setRotation(rot);
+    if (secondCrop && secondRot) {
+      setSecondCropData(secondCrop);
+      setSecondRotation(secondRot);
+    }
+    handleNext();
+  };
+
+  // Step 3: Filter
+  const handleFilterSelect = (selectedFilter: FilterType, secondSelectedFilter?: FilterType) => {
+    console.log("🎨 Filter selected:", selectedFilter.displayName);
+    setFilter(selectedFilter);
+    if (secondSelectedFilter) {
+      setSecondFilter(secondSelectedFilter);
+      console.log("🎨 Second filter:", secondSelectedFilter.displayName);
+    }
+    handleNext();
+  };
+
+  // Step 4: Text
+  const handleTextComplete = (text: TextOverlay | null, secondText?: TextOverlay | null) => {
+    console.log("✍️ Text overlay:", text?.content || "None");
+    setTextOverlay(text);
+    if (secondText !== undefined) {
+      setSecondTextOverlay(secondText);
+      console.log("✍️ Second text:", secondText?.content || "None");
+    }
+    handleNext();
+  };
+
+  // Step 5: Processing
+  const handleProcessingComplete = (processedUrl: string, secondProcessedUrl?: string) => {
+    console.log("✅ Processing complete");
+    console.log("Processed URL:", processedUrl);
+    if (secondProcessedUrl) {
+      console.log("Second Processed URL:", secondProcessedUrl);
+    }
+
+    setPhotoData({
+      ...photoData,
+      processed: processedUrl,
+      secondProcessed: secondProcessedUrl || null,
+    });
+    handleNext();
+  };
+
+  // Step 6: Print
   const handlePrint = () => {
     toast({
       title: "✅ Print initiated",
-      description: "Check your print dialog",
+      description: "Check the printer for your Polaroids",
     });
   };
 
@@ -108,58 +164,76 @@ const Index = () => {
     switch (currentStep) {
       case 1:
         return <Step1Upload onUploadComplete={handleUploadComplete} />;
-      
+
       case 2:
         return (
           <Step2Crop
             imageUrl={photoData.original!}
             imageId={photoData.imageId!}
+            secondImageUrl={photoData.secondOriginal || undefined}
+            secondImageId={photoData.secondImageId}
             onCropComplete={handleCropComplete}
           />
         );
-      
+
       case 3:
         return (
-          <Step3Layout
-            selectedLayout={selectedLayout}
-            onLayoutSelect={handleLayoutSelect}
+          <Step3Filter
+            imageId={photoData.imageId!}
+            secondImageId={photoData.secondImageId}
+            onFilterSelect={handleFilterSelect}
           />
         );
-      
+
       case 4:
         return (
+          <Step3_5Text
+            onTextComplete={handleTextComplete}
+            isDualMode={!!photoData.secondImageId}
+          />
+        );
+
+      case 5:
+        return (
           <Step4Processing
-            originalImage={photoData.cropped || photoData.original!}
             imageId={photoData.imageId!}
-            cropData={cropData}
+            cropData={cropData!}
+            rotation={rotation}
+            filter={filter!}
+            textOverlay={textOverlay}
+            secondImageId={photoData.secondImageId}
+            secondCropData={secondCropData || undefined}
+            secondRotation={secondRotation}
+            secondFilter={secondFilter || undefined}
+            secondTextOverlay={secondTextOverlay || undefined}
             onProcessingComplete={handleProcessingComplete}
           />
         );
-      
-      case 5:
+
+      case 6:
         return (
           <Step5BeforeAfter
-            originalImage={photoData.cropped || photoData.original!}
+            originalImage={photoData.original!}
             processedImage={photoData.processed!}
+            secondOriginalImage={photoData.secondOriginal || undefined}
+            secondProcessedImage={photoData.secondProcessed || undefined}
             onContinue={handleNext}
             onRetake={handleRetake}
           />
         );
-      
-      case 6:
-        // CRITICAL FIX: Use processedImageId for final step
-        const imageIdForPrint = processedImageId || photoData.imageId!;
-        console.log(`📄 Final step using image ID: ${imageIdForPrint}`);
-        
+
+      case 7:
         return (
           <Step6Final
-            imageId={imageIdForPrint}
-            layout={selectedLayout}
+            leftPolaroidUrl={photoData.processed!}
+            rightPolaroidUrl={photoData.secondProcessed || photoData.processed!}
+            leftImageId={photoData.imageId!}
+            rightImageId={photoData.secondImageId || photoData.imageId!}
             onPrint={handlePrint}
             onRetake={handleRetake}
           />
         );
-      
+
       default:
         return null;
     }
@@ -176,20 +250,23 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-foreground">
-                Passport Photo Studio
+                Polaroid Photo Printer
               </h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                Create instant memories
+              </p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Progress Navigation */}
-      {currentStep > 1 && currentStep < 6 && (
+      {currentStep > 1 && currentStep < 7 && (
         <StepNavigation
           currentStep={currentStep}
           totalSteps={totalSteps}
           onBack={handleBack}
-          mode="passport"
+          mode="polaroid"
         />
       )}
 
