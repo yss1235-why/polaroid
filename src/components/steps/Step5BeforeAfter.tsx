@@ -136,4 +136,62 @@ const Step5BeforeAfter = ({
 
           {/* Processed Image with Clip */}
           <div
-            className="absolute inset-0 overflow
+            className="absolute inset-0 overflow-hidden"
+            style={{ clipPath: `inset(0 ${100 - dividerPosition}% 0 0)` }}
+          >
+            <img
+              src={currentProcessed}
+              alt="Processed"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+              draggable={false}
+            />
+          </div>
+
+          {/* Labels */}
+          <div className="absolute top-4 left-4 bg-background/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium pointer-events-none">
+            Before
+          </div>
+          <div className="absolute top-4 right-4 bg-background/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium pointer-events-none">
+            After
+          </div>
+
+          {/* Divider */}
+          <div
+            className="absolute top-0 bottom-0 w-1 bg-primary shadow-lg pointer-events-none"
+            style={{ left: `${dividerPosition}%` }}
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg">
+              <div className="flex gap-1">
+                <div className="w-0.5 h-4 bg-primary-foreground" />
+                <div className="w-0.5 h-4 bg-primary-foreground" />
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full text-xs md:text-sm font-medium pointer-events-none">
+            Drag to compare
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="p-4 space-y-3 bg-card border-t border-border">
+        <Button onClick={onContinue} className="w-full gap-2" size="lg">
+          Continue to Print
+          <ArrowRight className="w-5 h-5" />
+        </Button>
+        <Button
+          onClick={onRetake}
+          variant="outline"
+          className="w-full gap-2"
+          size="lg"
+        >
+          <Upload className="w-5 h-5" />
+          Start Over
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default Step5BeforeAfter;
