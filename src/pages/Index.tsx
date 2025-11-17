@@ -280,4 +280,38 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-lg flex items-center justify-center">
+              <Camera className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">
+                Polaroid Photo Printer
+              </h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                Create instant memories
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Navigation */}
+      {currentStep > 1 && currentStep < 7 && (
+        <StepNavigation
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          onBack={handleBack}
+          mode="polaroid"
+        />
+      )}
+
+      {/* Main Content */}
+      <main className="container mx-auto">
+        {renderStep()}
+      </main>
+    </div>
+  );
+};
+
+export default Index;
