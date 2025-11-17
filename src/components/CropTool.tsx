@@ -1,14 +1,21 @@
 import { useState, useRef, useEffect } from "react";
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, RotateCw, RotateCcw, FlipHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CropData } from "@/types";
+import { CropData, RotationData } from "@/types";
 
 interface CropToolProps {
   imageUrl: string;
   onCropChange: (cropData: CropData) => void;
+  onRotationChange: (rotation: RotationData) => void;
+  currentRotation?: number;
 }
 
-export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
+export const CropTool = ({ 
+  imageUrl, 
+  onCropChange, 
+  onRotationChange,
+  currentRotation = 0 
+}: CropToolProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const cropBoxRef = useRef<HTMLDivElement>(null);
@@ -19,14 +26,16 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
   const [naturalDimensions, setNaturalDimensions] = useState({ width: 0, height: 0 });
+  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(currentRotation as 0 | 90 | 180 | 270);
 
-  const CROP_ASPECT_RATIO = 3.5 / 4.5;
+  // Polaroid aspect ratio: 2:3 (width:height)
+  const CROP_ASPECT_RATIO = 2 / 3;
 
   useEffect(() => {
     if (imageLoaded && naturalDimensions.width > 0) {
       updateCropData();
     }
-  }, [zoom, position, imageLoaded, naturalDimensions]);
+  }, [zoom, position, imageLoaded, naturalDimensions, rotation]);
 
   const updateCropData = () => {
     if (!containerRef.current || !imageRef.current || !cropBoxRef.current) return;
@@ -37,7 +46,6 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
     const displayWidth = image.offsetWidth;
     const displayHeight = image.offsetHeight;
     
-    // ✅ FIX: Get actual crop box dimensions from the rendered element
     const cropBox = cropBoxRef.current;
     const cropWidth = cropBox.offsetWidth;
     const cropHeight = cropBox.offsetHeight;
@@ -45,14 +53,11 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
     const containerCenterX = container.width / 2;
     const containerCenterY = container.height / 2;
     
-    const cropCenterX = containerCenterX;
-    const cropCenterY = containerCenterY;
-    
     const imageLeft = containerCenterX + position.x - (displayWidth * zoom) / 2;
     const imageTop = containerCenterY + position.y - (displayHeight * zoom) / 2;
     
-    const cropLeftOnImage = (cropCenterX - cropWidth / 2 - imageLeft) / zoom;
-    const cropTopOnImage = (cropCenterY - cropHeight / 2 - imageTop) / zoom;
+    const cropLeftOnImage = (containerCenterX - cropWidth / 2 - imageLeft) / zoom;
+    const cropTopOnImage = (containerCenterY - cropHeight / 2 - imageTop) / zoom;
     const cropWidthOnImage = cropWidth / zoom;
     const cropHeightOnImage = cropHeight / zoom;
     
@@ -62,10 +67,10 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
     const normalizedHeight = cropHeightOnImage / displayHeight;
     
     const cropData: CropData = {
-      x: normalizedX,
-      y: normalizedY,
-      width: normalizedWidth,
-      height: normalizedHeight,
+      x: Math.max(0, Math.min(1, normalizedX)),
+      y: Math.max(0, Math.min(1, normalizedY)),
+      width: Math.max(0, Math.min(1, normalizedWidth)),
+      height: Math.max(0, Math.min(1, normalizedHeight)),
       displayWidth: displayWidth,
       displayHeight: displayHeight,
       naturalWidth: naturalDimensions.width,
@@ -97,6 +102,25 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
   const handleReset = () => {
     setZoom(1);
     setPosition({ x: 0, y: 0 });
+  };
+
+  const handleRotateRight = () => {
+    const newRotation = ((rotation + 90) % 360) as 0 | 90 | 180 | 270;
+    setRotation(newRotation);
+    onRotationChange({ angle: newRotation });
+  };
+
+  const handleRotateLeft = () => {
+    const newRotation = ((rotation - 90 + 360) % 360) as 0 | 90 | 180 | 270;
+    setRotation(newRotation);
+    onRotationChange({ angle: newRotation });
+  };
+
+  const handleFlipHorizontal = () => {
+    // Flip is rotation 180
+    const newRotation = ((rotation + 180) % 360) as 0 | 90 | 180 | 270;
+    setRotation(newRotation);
+    onRotationChange({ angle: newRotation });
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -162,7 +186,7 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+            transform: `translate(${position.x}px, ${position.y}px) scale(${zoom}) rotate(${rotation}deg)`,
             transition: isDragging ? 'none' : 'transform 0.1s',
           }}
         >
@@ -184,19 +208,26 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
             ref={cropBoxRef}
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-primary bg-transparent shadow-lg"
             style={{
-              width: `${Math.min(280, containerRef.current?.clientWidth ? containerRef.current.clientWidth * 0.7 : 280)}px`,
+              width: `${Math.min(280, containerRef.current?.clientWidth ? containerRef.current.clientWidth * 0.6 : 280)}px`,
               aspectRatio: `${CROP_ASPECT_RATIO}`,
             }}
           >
+            {/* Corner markers */}
             <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-primary" />
             <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-primary" />
             <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-primary" />
             <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-primary" />
             
-            <div className="absolute top-1/2 left-0 right-0 h-px bg-primary/30" />
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-primary/30" />
+            {/* Grid lines */}
+            <div className="absolute top-1/3 left-0 right-0 h-px bg-primary/30" />
+            <div className="absolute top-2/3 left-0 right-0 h-px bg-primary/30" />
+            <div className="absolute left-1/3 top-0 bottom-0 w-px bg-primary/30" />
+            <div className="absolute left-2/3 top-0 bottom-0 w-px bg-primary/30" />
             
-            <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[60%] aspect-square rounded-full border-2 border-dashed border-primary/40" />
+            {/* White border preview at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-white/20 border-t border-primary/50">
+              <div className="text-xs text-center text-white/60 mt-2">Text area</div>
+            </div>
           </div>
 
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
@@ -206,38 +237,78 @@ export const CropTool = ({ imageUrl, onCropChange }: CropToolProps) => {
       </div>
 
       {/* Controls */}
-      <div className="p-4 flex items-center justify-center gap-2 bg-card border-t border-border">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleZoomOut}
-          disabled={zoom <= 0.5}
-        >
-          <ZoomOut className="w-4 h-4" />
-        </Button>
-        
-        <div className="px-4 py-2 bg-muted rounded-md text-sm font-medium min-w-[80px] text-center">
-          {Math.round(zoom * 100)}%
-        </div>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleZoomIn}
-          disabled={zoom >= 3}
-        >
-          <ZoomIn className="w-4 h-4" />
-        </Button>
+      <div className="p-4 bg-card border-t border-border">
+        {/* Rotation Controls */}
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRotateLeft}
+            className="gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="hidden sm:inline">Rotate Left</span>
+          </Button>
+          
+          <div className="px-3 py-1 bg-muted rounded text-sm font-medium">
+            {rotation}°
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRotateRight}
+            className="gap-2"
+          >
+            <RotateCw className="w-4 h-4" />
+            <span className="hidden sm:inline">Rotate Right</span>
+          </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleReset}
-          className="gap-2"
-        >
-          <Maximize2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Reset</span>
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleFlipHorizontal}
+            className="gap-2"
+          >
+            <FlipHorizontal className="w-4 h-4" />
+            <span className="hidden sm:inline">Flip</span>
+          </Button>
+        </div>
+
+        {/* Zoom Controls */}
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomOut}
+            disabled={zoom <= 0.5}
+          >
+            <ZoomOut className="w-4 h-4" />
+          </Button>
+          
+          <div className="px-4 py-2 bg-muted rounded-md text-sm font-medium min-w-[80px] text-center">
+            {Math.round(zoom * 100)}%
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomIn}
+            disabled={zoom >= 3}
+          >
+            <ZoomIn className="w-4 h-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            className="gap-2"
+          >
+            <Maximize2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Reset</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
