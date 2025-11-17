@@ -23,9 +23,9 @@ const POLAROID_DIMS = {
   PHOTO_HEIGHT: 1170,
   SIDE_BORDER: 23,
   TOP_BORDER: 15,
-  BOTTOM_BORDER: 117,
-  TOTAL_WIDTH: 825, // 780 + 23 + 23
-  TOTAL_HEIGHT: 1287, // 1170 + 15 + 117
+  BOTTOM_BORDER: 102, // Fixed: 1287 - 15 - 1170 = 102
+  TOTAL_WIDTH: 826, // 780 + 23 + 23
+  TOTAL_HEIGHT: 1287, // 1170 + 15 + 102
 };
 
 class CloudinaryService {
@@ -255,24 +255,17 @@ class CloudinaryService {
     if (filter && filter.cloudinaryEffect) {
       transformations.push(filter.cloudinaryEffect);
     }
-// Step 6a: First add left and right borders (23px each side)
+// Step 6: Create white Polaroid frame and position photo precisely
     transformations.push(
-      `b_rgb:ffffff,` +
-      `c_pad,` +
-      `w_${POLAROID_DIMS.PHOTO_WIDTH + (POLAROID_DIMS.SIDE_BORDER * 2)},` +
-      `h_${POLAROID_DIMS.PHOTO_HEIGHT}`
-    );
-
-    // Step 6b: Then add top (15px) and bottom (117px) borders
-    transformations.push(
-      `b_rgb:ffffff,` +
       `c_lpad,` +
       `w_${POLAROID_DIMS.TOTAL_WIDTH},` +
       `h_${POLAROID_DIMS.TOTAL_HEIGHT},` +
-      `g_north,` +
+      `b_white,` +
+      `g_north_west,` +
+      `x_${POLAROID_DIMS.SIDE_BORDER},` +
       `y_${POLAROID_DIMS.TOP_BORDER}`
     );
-
+    
     // Step 7: Add thin black border around entire Polaroid
     transformations.push('bo_2px_solid_rgb:2a2a2a');
 
@@ -286,9 +279,8 @@ class CloudinaryService {
       const color = textOverlay.color.replace('#', 'rgb:');
       
       // Calculate Y position to place text in bottom white area
-      // Bottom border is 117px, center the text vertically in that space
+      // Bottom border is 102px, center the text vertically in that space
       const yOffset = Math.round(POLAROID_DIMS.BOTTOM_BORDER / 2 - fontSize / 2);
-      
       transformations.push(
         `l_text:${fontFamily}_${fontSize}_center:${encodedText},` +
         `co_${color},` +
