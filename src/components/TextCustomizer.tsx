@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { TEXT_FONTS, TEXT_COLORS, TextOverlay } from "@/types";
 import { hasGoodContrast } from "@/utils/polaroidHelpers";
+import { Loader2 } from "lucide-react";
 
 interface TextCustomizerProps {
   value: TextOverlay;
@@ -13,6 +14,23 @@ interface TextCustomizerProps {
 
 export const TextCustomizer = ({ value, onChange, photoNumber }: TextCustomizerProps) => {
   const [customColor, setCustomColor] = useState(value.color);
+  const [fontLoaded, setFontLoaded] = useState(false);
+
+  // Check if font is loaded
+  useEffect(() => {
+    const checkFontLoaded = async () => {
+      try {
+        // Wait for document fonts to be ready
+        await document.fonts.ready;
+        setFontLoaded(true);
+      } catch (error) {
+        console.error("Font loading check failed:", error);
+        setFontLoaded(true); // Proceed anyway
+      }
+    };
+
+    checkFontLoaded();
+  }, [value.font]);
 
   const handleContentChange = (content: string) => {
     if (content.length <= 50) {
@@ -21,6 +39,7 @@ export const TextCustomizer = ({ value, onChange, photoNumber }: TextCustomizerP
   };
 
   const handleFontChange = (font: string) => {
+    setFontLoaded(false);
     onChange({ ...value, font });
   };
 
@@ -156,11 +175,16 @@ export const TextCustomizer = ({ value, onChange, photoNumber }: TextCustomizerP
 
       {/* Preview Text */}
       {value.content && (
-        <div className="p-4 bg-muted rounded-md text-center">
+        <div className="p-4 bg-white rounded-md text-center border-2 border-gray-200 relative">
           <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+          {!fontLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            </div>
+          )}
           <p
             style={{
-              fontFamily: value.font,
+              fontFamily: `'${value.font}', Arial, sans-serif`,
               color: value.color,
               fontSize: `${Math.min(value.size, 24)}px`,
             }}
