@@ -256,16 +256,11 @@ class CloudinaryService {
       transformations.push(filter.cloudinaryEffect);
     }
 
-    // Step 6: Create the Polaroid frame structure
-    // We'll use background + padding approach to create authentic Polaroid look
-    
-    // Add white background with proper Polaroid dimensions
+   // Step 6: Add Polaroid white borders using border parameter
+    // This adds borders WITHOUT resizing the photo
+    // Format: top_right_bottom_left in pixels
     transformations.push(
-      `b_white,` + 
-      `c_lpad,` + // Letter pad to maintain aspect ratio
-      `w_${POLAROID_DIMS.TOTAL_WIDTH},` +
-      `h_${POLAROID_DIMS.TOTAL_HEIGHT},` +
-      `g_north` // Align to top (leaves white space at bottom)
+      `bo_${POLAROID_DIMS.TOP_BORDER}px_${POLAROID_DIMS.SIDE_BORDER}px_${POLAROID_DIMS.BOTTOM_BORDER}px_${POLAROID_DIMS.SIDE_BORDER}px_solid_white`
     );
 
     // Step 7: Add thin black border around entire Polaroid
