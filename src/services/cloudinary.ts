@@ -255,15 +255,11 @@ class CloudinaryService {
     if (filter && filter.cloudinaryEffect) {
       transformations.push(filter.cloudinaryEffect);
     }
-// Step 6: Add Polaroid white borders using padding
-    // c_pad adds white space around the 780x1170 photo to create borders
-    // g_north aligns photo to top, creating larger bottom border
+// Step 6: Add Polaroid white borders with exact dimensions
+    // Using border parameter to add precise borders on each side
+    // Format: bo_{width}px_solid_{color} for each side
     transformations.push(
-      `b_white,` +
-      `c_pad,` +
-      `w_${POLAROID_DIMS.TOTAL_WIDTH},` +
-      `h_${POLAROID_DIMS.TOTAL_HEIGHT},` +
-      `g_north`
+      `bo_${POLAROID_DIMS.TOP_BORDER}px_${POLAROID_DIMS.SIDE_BORDER}px_${POLAROID_DIMS.BOTTOM_BORDER}px_${POLAROID_DIMS.SIDE_BORDER}px_solid_white`
     );
 
     // Step 7: Add thin black border around entire Polaroid
