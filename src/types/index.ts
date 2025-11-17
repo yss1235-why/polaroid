@@ -113,7 +113,7 @@ export const CLOUDINARY_FILTERS: FilterType[] = [
   { name: 'zorro', displayName: 'Zorro', cloudinaryEffect: 'e_art:zorro' },
 ];
 
-// Font options for text overlay
+// Font options for text overlay - Updated with correct Google Font names
 export const TEXT_FONTS = [
   { value: 'Arial', label: 'Simple Clean' },
   { value: 'Cookie', label: 'Handwritten' },
@@ -121,10 +121,10 @@ export const TEXT_FONTS = [
   { value: 'Courier', label: 'Vintage Typewriter' },
   { value: 'Impact', label: 'Bold Brush' },
   { value: 'Helvetica', label: 'Thin Modern' },
-  { value: 'ComicSansMS', label: 'Bubble Rounded' },
-  { value: 'PressStart2P', label: 'Retro 80s' },
-  { value: 'GreatVibes', label: 'Fancy Calligraphy' },
-  { value: 'BangersRegular', label: 'Comic Casual' },
+  { value: 'Comic Sans MS', label: 'Bubble Rounded' },
+  { value: 'Press Start 2P', label: 'Retro 80s' },
+  { value: 'Great Vibes', label: 'Fancy Calligraphy' },
+  { value: 'Bangers', label: 'Comic Casual' },
 ];
 
 // Color presets for text
