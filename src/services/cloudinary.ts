@@ -130,7 +130,7 @@ class CloudinaryService {
   }
 
   /**
-   * NEW: Generate cropped-only URL for "before" preview
+   * Generate cropped-only URL for "before" preview
    * This creates JUST the cropped and rotated image with NO filters, borders, or enhancements
    */
   generateCroppedOnlyUrl(
@@ -159,6 +159,55 @@ class CloudinaryService {
     // Step 4: Basic quality settings
     transformations.push('q_90');
     transformations.push('f_auto');
+
+    const transformString = transformations.join('/');
+    return `https://res.cloudinary.com/${credentials.cloudName}/image/upload/${transformString}/${publicId}`;
+  }
+
+  /**
+   * NEW: Generate enhanced photo URL (with filters but NO Polaroid frame)
+   * This is for the "after" side of the before/after comparison
+   */
+  generateEnhancedPhotoUrl(
+    publicId: string,
+    cropData: CropData,
+    rotation: RotationData,
+    filter: FilterType
+  ): string {
+    const credentials = this.getCurrentCredentials();
+    const transformations: string[] = [];
+
+    // Step 1: Crop the original image
+    const cropX = Math.round(cropData.x * cropData.naturalWidth);
+    const cropY = Math.round(cropData.y * cropData.naturalHeight);
+    const cropW = Math.round(cropData.width * cropData.naturalWidth);
+    const cropH = Math.round(cropData.height * cropData.naturalHeight);
+    transformations.push(`c_crop,x_${cropX},y_${cropY},w_${cropW},h_${cropH}`);
+
+    // Step 2: Rotation if provided
+    if (rotation && rotation.angle !== 0) {
+      transformations.push(`a_${rotation.angle}`);
+    }
+
+    // Step 3: Resize to Polaroid photo dimensions (2:3 aspect ratio)
+    transformations.push(`c_fill,w_${POLAROID_DIMS.PHOTO_WIDTH},h_${POLAROID_DIMS.PHOTO_HEIGHT},g_auto`);
+
+    // Step 4: Auto enhancement
+    transformations.push('e_improve');
+    transformations.push('e_auto_color');
+    transformations.push('e_auto_brightness');
+    transformations.push('e_auto_contrast');
+    transformations.push('e_sharpen:80');
+
+    // Step 5: Apply filter if selected
+    if (filter && filter.cloudinaryEffect) {
+      transformations.push(filter.cloudinaryEffect);
+    }
+
+    // Step 6: Final optimization
+    transformations.push('q_95'); // High quality
+    transformations.push('f_auto'); // Auto format
+    transformations.push('dpr_2.0'); // 2x DPI for crisp display
 
     const transformString = transformations.join('/');
     return `https://res.cloudinary.com/${credentials.cloudName}/image/upload/${transformString}/${publicId}`;
