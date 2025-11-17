@@ -232,7 +232,7 @@ const Step6Final = ({
               <div className="grid grid-cols-2 gap-4 p-8 h-full">
                 {/* Left Polaroid */}
                 <div className="relative">
-                  <div className="w-full h-full bg-white p-2 shadow-lg rounded">
+                  <div className="w-full h-full bg-white p-2 shadow-lg rounded polaroid-border-preview">
                     <div className="aspect-[2/3] overflow-hidden rounded">
                       <img
                         src={leftPolaroidUrl}
@@ -247,7 +247,7 @@ const Step6Final = ({
 
                 {/* Right Polaroid */}
                 <div className="relative">
-                  <div className="w-full h-full bg-white p-2 shadow-lg rounded">
+                  <div className="w-full h-full bg-white p-2 shadow-lg rounded polaroid-border-preview">
                     <div className="aspect-[2/3] overflow-hidden rounded">
                       <img
                         src={rightPolaroidUrl}
@@ -261,9 +261,9 @@ const Step6Final = ({
                 </div>
               </div>
 
-              {/* Branding */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-                <p className="text-gray-400 text-sm font-serif italic">
+              {/* Vertical Branding on Right Side */}
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <p className="text-gray-400 text-xs font-serif italic vertical-text tracking-wider">
                   Innovative Archive
                 </p>
               </div>
