@@ -24,8 +24,8 @@ const POLAROID_DIMS = {
   SIDE_BORDER: 23,
   TOP_BORDER: 15,
   BOTTOM_BORDER: 117,
-  TOTAL_WIDTH: 826, // 780 + 23 + 23
-  TOTAL_HEIGHT: 1302, // 1170 + 15 + 117
+  TOTAL_WIDTH: 825, // 780 + 23 + 23
+  TOTAL_HEIGHT: 1287, // 1170 + 15 + 117
 };
 
 class CloudinaryService {
