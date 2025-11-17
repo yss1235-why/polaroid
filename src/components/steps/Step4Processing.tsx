@@ -16,7 +16,9 @@ interface Step4ProcessingProps {
   secondTextOverlay?: TextOverlay | null;
   onProcessingComplete: (
     processedUrl: string,
-    secondProcessedUrl?: string
+    enhancedUrl: string,
+    secondProcessedUrl?: string,
+    secondEnhancedUrl?: string
   ) => void;
 }
 
@@ -72,7 +74,17 @@ const Step4Processing = ({
     try {
       console.log("🎨 Starting Polaroid processing...");
       
-      // Generate processed URL for first photo using Cloudinary transformations
+      // Generate ENHANCED photo URL (for before/after comparison - NO frame)
+      const enhancedUrl1 = cloudinaryService.generateEnhancedPhotoUrl(
+        imageId,
+        cropData,
+        rotation,
+        filter
+      );
+
+      console.log("✅ First enhanced photo URL:", enhancedUrl1);
+
+      // Generate full PROCESSED Polaroid URL (with frame and text for final print)
       const processedUrl1 = cloudinaryService.generateProcessedUrl(
         imageId,
         cropData,
@@ -81,11 +93,22 @@ const Step4Processing = ({
         textOverlay || undefined
       );
 
-      console.log("✅ First photo processed:", processedUrl1);
+      console.log("✅ First Polaroid processed:", processedUrl1);
 
       let processedUrl2: string | undefined;
+      let enhancedUrl2: string | undefined;
 
       if (isDualMode && secondImageId && secondCropData && secondRotation) {
+        // Generate enhanced URL for second photo
+        enhancedUrl2 = cloudinaryService.generateEnhancedPhotoUrl(
+          secondImageId,
+          secondCropData,
+          secondRotation,
+          secondFilter || filter
+        );
+
+        console.log("✅ Second enhanced photo URL:", enhancedUrl2);
+
         // Generate processed URL for second photo
         processedUrl2 = cloudinaryService.generateProcessedUrl(
           secondImageId,
@@ -95,7 +118,7 @@ const Step4Processing = ({
           secondTextOverlay || undefined
         );
 
-        console.log("✅ Second photo processed:", processedUrl2);
+        console.log("✅ Second Polaroid processed:", processedUrl2);
       }
 
       clearInterval(progressInterval);
@@ -104,7 +127,7 @@ const Step4Processing = ({
 
       // Wait 500ms before showing results
       setTimeout(() => {
-        onProcessingComplete(processedUrl1, processedUrl2);
+        onProcessingComplete(processedUrl1, enhancedUrl1, processedUrl2, enhancedUrl2);
       }, 500);
 
     } catch (error) {
