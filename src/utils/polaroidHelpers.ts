@@ -11,13 +11,13 @@ export const POLAROID_DIMENSIONS = {
   PHOTO_HEIGHT_INCHES: 3.9,
   
   // With border
-  TOTAL_WIDTH_PX: 825,
+  TOTAL_WIDTH_PX: 826,
   TOTAL_HEIGHT_PX: 1287,
   
   // Border widths
-  SIDE_BORDER_PX: 22.5,
+  SIDE_BORDER_PX: 23,
   TOP_BORDER_PX: 15,
-  BOTTOM_BORDER_PX: 117,
+  BOTTOM_BORDER_PX: 102,
   
   // Sheet dimensions
   SHEET_WIDTH_PX: 1200,
@@ -84,11 +84,11 @@ export function generateCutLines() {
  * Calculate text position within bottom border
  */
 export function calculateTextPosition(textSize: number): { x: number; y: number } {
-  const { BOTTOM_BORDER_PX, PHOTO_HEIGHT_PX, TOP_BORDER_PX } = POLAROID_DIMENSIONS;
+  const { BOTTOM_BORDER_PX } = POLAROID_DIMENSIONS;
   
   return {
     x: 0, // Centered horizontally by Cloudinary
-    y: PHOTO_HEIGHT_PX + TOP_BORDER_PX + (BOTTOM_BORDER_PX / 2) - (textSize / 2),
+    y: Math.round(BOTTOM_BORDER_PX / 2 - textSize / 2),
   };
 }
 
