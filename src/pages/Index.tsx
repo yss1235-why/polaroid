@@ -26,6 +26,8 @@ const Index = () => {
     secondProcessed: null,
     croppedOnly: null,
     secondCroppedOnly: null,
+    enhancedOnly: null,
+    secondEnhancedOnly: null,
   });
 
   // Processing data
@@ -68,6 +70,8 @@ const Index = () => {
       secondProcessed: null,
       croppedOnly: null,
       secondCroppedOnly: null,
+      enhancedOnly: null,
+      secondEnhancedOnly: null,
     });
     setCropData(null);
     setRotation({ angle: 0 });
@@ -173,17 +177,26 @@ const Index = () => {
   };
 
   // Step 5: Processing
-  const handleProcessingComplete = (processedUrl: string, secondProcessedUrl?: string) => {
+  const handleProcessingComplete = (
+    processedUrl: string, 
+    enhancedUrl: string,
+    secondProcessedUrl?: string,
+    secondEnhancedUrl?: string
+  ) => {
     console.log("✅ Processing complete");
-    console.log("Processed URL:", processedUrl);
-    if (secondProcessedUrl) {
-      console.log("Second Processed URL:", secondProcessedUrl);
+    console.log("Processed Polaroid URL:", processedUrl);
+    console.log("Enhanced photo URL:", enhancedUrl);
+    if (secondProcessedUrl && secondEnhancedUrl) {
+      console.log("Second Processed Polaroid URL:", secondProcessedUrl);
+      console.log("Second Enhanced photo URL:", secondEnhancedUrl);
     }
 
     setPhotoData({
       ...photoData,
       processed: processedUrl,
+      enhancedOnly: enhancedUrl,
       secondProcessed: secondProcessedUrl || null,
+      secondEnhancedOnly: secondEnhancedUrl || null,
     });
     handleNext();
   };
@@ -250,9 +263,9 @@ const Index = () => {
         return (
           <Step5BeforeAfter
             originalImage={photoData.croppedOnly!}
-            processedImage={photoData.processed!}
+            processedImage={photoData.enhancedOnly!}
             secondOriginalImage={photoData.secondCroppedOnly || undefined}
-            secondProcessedImage={photoData.secondProcessed || undefined}
+            secondProcessedImage={photoData.secondEnhancedOnly || undefined}
             onContinue={handleNext}
             onRetake={handleRetake}
           />
