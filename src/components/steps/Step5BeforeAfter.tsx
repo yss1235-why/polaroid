@@ -83,7 +83,7 @@ const Step5BeforeAfter = ({
           Compare Your Results
         </h2>
         <p className="text-sm text-muted-foreground">
-          Drag the slider to see before and after
+          Drag the slider to see before and after enhancement
         </p>
       </div>
 
@@ -126,22 +126,22 @@ const Step5BeforeAfter = ({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleEnd}
         >
-          {/* Original Image (Background) */}
+          {/* Original Image (Cropped Only - No Enhancements) */}
           <img
             src={currentOriginal}
-            alt="Original"
+            alt="Cropped photo without enhancements"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             draggable={false}
           />
 
-          {/* Processed Image with Clip */}
+          {/* Processed Image with Clip (Enhanced Polaroid) */}
           <div
             className="absolute inset-0 overflow-hidden"
             style={{ clipPath: `inset(0 ${100 - dividerPosition}% 0 0)` }}
           >
             <img
               src={currentProcessed}
-              alt="Processed"
+              alt="Enhanced Polaroid"
               className="absolute inset-0 w-full h-full object-contain pointer-events-none"
               draggable={false}
             />
@@ -149,10 +149,10 @@ const Step5BeforeAfter = ({
 
           {/* Labels */}
           <div className="absolute top-4 left-4 bg-background/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium pointer-events-none">
-            Before
+            Before Enhancement
           </div>
           <div className="absolute top-4 right-4 bg-background/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium pointer-events-none">
-            After
+            After Enhancement
           </div>
 
           {/* Divider */}
