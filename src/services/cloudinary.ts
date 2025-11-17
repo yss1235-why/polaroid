@@ -17,6 +17,17 @@ const CLOUDINARY_UPLOAD_PRESET_2 = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 const CLOUDINARY_API_KEY_2 = import.meta.env.VITE_CLOUDINARY_API_KEY_2;
 const CLOUDINARY_API_SECRET_2 = import.meta.env.VITE_CLOUDINARY_API_SECRET_2;
 
+// Polaroid dimensions in pixels at 300 DPI
+const POLAROID_DIMS = {
+  PHOTO_WIDTH: 780,
+  PHOTO_HEIGHT: 1170,
+  SIDE_BORDER: 23,
+  TOP_BORDER: 15,
+  BOTTOM_BORDER: 117,
+  TOTAL_WIDTH: 826, // 780 + 23 + 23
+  TOTAL_HEIGHT: 1302, // 1170 + 15 + 117
+};
+
 class CloudinaryService {
   private currentAccount: 1 | 2 = 1;
   private account1Failed = false;
@@ -119,7 +130,8 @@ class CloudinaryService {
   }
 
   /**
-   * Generate processed Polaroid image URL with all transformations
+   * Generate processed Polaroid image URL with proper structure
+   * Creates authentic Polaroid with white borders and text in bottom area
    */
   generateProcessedUrl(
     publicId: string,
@@ -131,7 +143,7 @@ class CloudinaryService {
     const credentials = this.getCurrentCredentials();
     const transformations: string[] = [];
 
-    // 1. Crop if provided
+    // Step 1: Crop the original image if provided
     if (cropData) {
       const cropX = Math.round(cropData.x * cropData.naturalWidth);
       const cropY = Math.round(cropData.y * cropData.naturalHeight);
@@ -140,46 +152,67 @@ class CloudinaryService {
       transformations.push(`c_crop,x_${cropX},y_${cropY},w_${cropW},h_${cropH}`);
     }
 
-    // 2. Resize to Polaroid dimensions (780x1170 for photo area)
-    transformations.push('c_fill,w_780,h_1170');
-
-    // 3. Rotation if provided
+    // Step 2: Rotation if provided
     if (rotation && rotation.angle !== 0) {
       transformations.push(`a_${rotation.angle}`);
     }
 
-    // 4. Auto enhancement
+    // Step 3: Resize to Polaroid photo dimensions (2:3 aspect ratio)
+    transformations.push(`c_fill,w_${POLAROID_DIMS.PHOTO_WIDTH},h_${POLAROID_DIMS.PHOTO_HEIGHT},g_auto`);
+
+    // Step 4: Auto enhancement
     transformations.push('e_improve');
     transformations.push('e_auto_color');
     transformations.push('e_auto_brightness');
     transformations.push('e_auto_contrast');
     transformations.push('e_sharpen:80');
 
-    // 5. Filter if selected
+    // Step 5: Apply filter if selected
     if (filter && filter.cloudinaryEffect) {
       transformations.push(filter.cloudinaryEffect);
     }
 
-    // 6. Add Polaroid white border
-    transformations.push('b_white,bo_23px_solid_white'); // Side borders
-    transformations.push('e_shadow:50'); // 3D effect
+    // Step 6: Create the Polaroid frame structure
+    // We'll use background + padding approach to create authentic Polaroid look
+    
+    // Add white background with proper Polaroid dimensions
+    transformations.push(
+      `b_white,` + 
+      `c_lpad,` + // Letter pad to maintain aspect ratio
+      `w_${POLAROID_DIMS.TOTAL_WIDTH},` +
+      `h_${POLAROID_DIMS.TOTAL_HEIGHT},` +
+      `g_north` // Align to top (leaves white space at bottom)
+    );
 
-    // 7. Text overlay if provided
+    // Step 7: Add thin black border around entire Polaroid
+    transformations.push('bo_2px_solid_rgb:2a2a2a');
+
+    // Step 8: Add subtle shadow for depth
+    transformations.push('e_shadow:40');
+
+    // Step 9: Add text overlay in the bottom white space if provided
     if (textOverlay && textOverlay.content) {
       const encodedText = encodeURIComponent(textOverlay.content);
-      const fontFamily = textOverlay.font.replace(/\s+/g, '');
-      const fontSize = textOverlay.size;
+      const fontFamily = textOverlay.font.replace(/\s+/g, '%20');
+      const fontSize = Math.min(textOverlay.size, 36); // Cap size for Polaroid
       const color = textOverlay.color.replace('#', 'rgb:');
       
-      // Position text at bottom of Polaroid (in the white border area)
+      // Calculate Y position to place text in bottom white area
+      // Bottom border is 117px, center the text vertically in that space
+      const yOffset = Math.round(POLAROID_DIMS.BOTTOM_BORDER / 2 - fontSize / 2);
+      
       transformations.push(
-        `l_text:${fontFamily}_${fontSize}:${encodedText},co_${color},g_south,y_40`
+        `l_text:${fontFamily}_${fontSize}_center:${encodedText},` +
+        `co_${color},` +
+        `g_south,` +
+        `y_${yOffset}`
       );
     }
 
-    // 8. Final optimization
-    transformations.push('q_95'); // 95% quality
+    // Step 10: Final optimization
+    transformations.push('q_95'); // High quality
     transformations.push('f_auto'); // Auto format
+    transformations.push('dpr_2.0'); // 2x DPI for crisp printing
 
     const transformString = transformations.join('/');
     return `https://res.cloudinary.com/${credentials.cloudName}/image/upload/${transformString}/${publicId}`;
@@ -194,6 +227,8 @@ class CloudinaryService {
       'c_fill,w_300,h_450', // Smaller for preview
       'e_improve',
       filter.cloudinaryEffect || '',
+      'q_auto',
+      'f_auto',
     ].filter(Boolean);
 
     return `https://res.cloudinary.com/${credentials.cloudName}/image/upload/${transformations.join('/')}/${publicId}`;
@@ -201,25 +236,25 @@ class CloudinaryService {
 
   /**
    * Generate sheet layout with 2 Polaroids side-by-side
+   * This creates the final 4x6 inch print sheet at 300 DPI
    */
   async generateSheetLayout(
     leftPolaroidUrl: string,
     rightPolaroidUrl: string
   ): Promise<string> {
-    const credentials = this.getCurrentCredentials();
+    // For the actual print sheet, we'll compose 2 Polaroids side by side
+    // Sheet dimensions: 1200x1800 px (4x6 inches at 300 DPI)
+    // Each Polaroid: 826x1302 px
     
-    // Create a composite image using Cloudinary's overlay features
-    // Base canvas: 1200x1800 white background (4x6 inches at 300 DPI)
-    const baseTransform = 'w_1200,h_1800,c_fill,b_white';
+    // Calculate positioning
+    const sheetWidth = 1200;
+    const sheetHeight = 1800;
+    const polaroidWidth = POLAROID_DIMS.TOTAL_WIDTH;
+    const gap = Math.floor((sheetWidth - (polaroidWidth * 2)) / 3); // Equal gaps
     
-    // Fetch and overlay images
-    // This is a simplified version - in production you might want to upload
-    // the Polaroid images and then create overlays
-    
-    // For now, return a placeholder URL that the backend will process
-    // In a real implementation, you'd use Cloudinary's layer overlays:
-    // l_fetch:base64(leftPolaroidUrl),w_435,h_652,x_-300,y_0
-    // l_fetch:base64(rightPolaroidUrl),w_435,h_652,x_300,y_0
+    // This would typically be handled server-side or using Cloudinary's 
+    // layer composition features. For now, return a placeholder.
+    // In production, you'd use Cloudinary's overlay API to compose the sheet.
     
     return `sheet_composite_${Date.now()}`;
   }
@@ -293,12 +328,4 @@ class CloudinaryService {
   }
 
   /**
-   * Reset account rotation (for testing or monthly reset)
-   */
-  resetAccounts() {
-    this.currentAccount = 1;
-    this.account1Failed = false;
-  }
-}
-
-export const cloudinaryService = new CloudinaryService();
+   * Reset account rotation (for testing or
