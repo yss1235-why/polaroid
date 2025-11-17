@@ -94,14 +94,17 @@ const Step2Crop = ({
   return (
     <div className="h-[calc(100vh-180px)] flex flex-col">
       {/* Header */}
-      {isDualMode && (
-        <div className="p-4 bg-card border-b border-border text-center">
-          <p className="text-sm font-medium text-muted-foreground">
+      <div className="p-4 bg-card border-b border-border text-center">
+        {isDualMode && (
+          <p className="text-sm font-medium text-muted-foreground mb-2">
             Cropping {currentPhoto === "first" ? "Left" : "Right"} Polaroid
             {" "}(Photo {currentPhoto === "first" ? "1" : "2"} of 2)
           </p>
-        </div>
-      )}
+        )}
+        <p className="text-xs text-muted-foreground">
+          📸 Position your subject - Polaroid borders will be added automatically
+        </p>
+      </div>
 
       {/* Crop Tool */}
       <div className="flex-1 relative">
