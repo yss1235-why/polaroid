@@ -9,6 +9,9 @@ export interface PhotoData {
   secondImageId?: string;
   secondOriginal?: string | null;
   secondProcessed?: string | null;
+  // NEW: Add cropped-only URLs for before/after comparison
+  croppedOnly?: string | null;
+  secondCroppedOnly?: string | null;
 }
 
 export interface CropData {
