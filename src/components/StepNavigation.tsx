@@ -11,12 +11,13 @@ interface StepNavigationProps {
 
 const getStepLabel = (step: number): string => {
   const labels: { [key: number]: string } = {
-    1: "Upload Photo",
-    2: "Crop Image",
-    3: "Choose Layout",
-    4: "Processing",
-    5: "Compare Results",
-    6: "Print Preview",
+    1: "Upload Photo(s)",
+    2: "Crop & Rotate",
+    3: "Choose Filter",
+    4: "Add Text",
+    5: "Processing",
+    6: "Compare Results",
+    7: "Print Preview",
   };
   return labels[step] || "";
 };
