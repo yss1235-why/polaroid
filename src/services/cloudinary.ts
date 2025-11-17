@@ -255,11 +255,22 @@ class CloudinaryService {
     if (filter && filter.cloudinaryEffect) {
       transformations.push(filter.cloudinaryEffect);
     }
-// Step 6: Add Polaroid white borders with exact dimensions
-    // Using border parameter to add precise borders on each side
-    // Format: bo_{width}px_solid_{color} for each side
+// Step 6a: First add left and right borders (23px each side)
     transformations.push(
-      `bo_${POLAROID_DIMS.TOP_BORDER}px_${POLAROID_DIMS.SIDE_BORDER}px_${POLAROID_DIMS.BOTTOM_BORDER}px_${POLAROID_DIMS.SIDE_BORDER}px_solid_white`
+      `b_rgb:ffffff,` +
+      `c_pad,` +
+      `w_${POLAROID_DIMS.PHOTO_WIDTH + (POLAROID_DIMS.SIDE_BORDER * 2)},` +
+      `h_${POLAROID_DIMS.PHOTO_HEIGHT}`
+    );
+
+    // Step 6b: Then add top (15px) and bottom (117px) borders
+    transformations.push(
+      `b_rgb:ffffff,` +
+      `c_lpad,` +
+      `w_${POLAROID_DIMS.TOTAL_WIDTH},` +
+      `h_${POLAROID_DIMS.TOTAL_HEIGHT},` +
+      `g_north,` +
+      `y_${POLAROID_DIMS.TOP_BORDER}`
     );
 
     // Step 7: Add thin black border around entire Polaroid
@@ -267,7 +278,6 @@ class CloudinaryService {
 
     // Step 8: Add subtle shadow for depth
     transformations.push('e_shadow:40');
-
     // Step 9: Add text overlay in the bottom white space if provided
     if (textOverlay && textOverlay.content) {
       const encodedText = encodeURIComponent(textOverlay.content);
