@@ -1,32 +1,48 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { apiService } from "@/services/api";
-import { CropData } from "@/types";
+import { cloudinaryService } from "@/services/cloudinary";
+import { CropData, RotationData, FilterType, TextOverlay } from "@/types";
 
 interface Step4ProcessingProps {
-  originalImage: string;
   imageId: string;
-  cropData: CropData | null;
-  onProcessingComplete: (beforeImage: string, afterImage: string, processedImageId: string) => void;
+  cropData: CropData;
+  rotation: RotationData;
+  filter: FilterType;
+  textOverlay: TextOverlay | null;
+  secondImageId?: string;
+  secondCropData?: CropData;
+  secondRotation?: RotationData;
+  secondFilter?: FilterType;
+  secondTextOverlay?: TextOverlay | null;
+  onProcessingComplete: (
+    processedUrl: string,
+    secondProcessedUrl?: string
+  ) => void;
 }
 
 const Step4Processing = ({ 
-  originalImage,
   imageId,
   cropData,
+  rotation,
+  filter,
+  textOverlay,
+  secondImageId,
+  secondCropData,
+  secondRotation,
+  secondFilter,
+  secondTextOverlay,
   onProcessingComplete 
 }: Step4ProcessingProps) => {
   const { toast } = useToast();
-  const [processing, setProcessing] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState("Preparing your photo...");
+  const [statusMessage, setStatusMessage] = useState("Preparing your Polaroid...");
 
   useEffect(() => {
-    processImage();
+    processImages();
   }, []);
 
-  const processImage = async () => {
-    setProcessing(true);
+  const processImages = async () => {
+    const isDualMode = !!secondImageId;
     
     // Simulate progress with status messages
     const progressInterval = setInterval(() => {
@@ -37,12 +53,16 @@ const Step4Processing = ({
         }
         
         // Update status message based on progress
-        if (prev < 30) {
-          setStatusMessage("Detecting face...");
+        if (prev < 20) {
+          setStatusMessage(isDualMode ? "Processing first photo..." : "Applying auto-enhancement...");
+        } else if (prev < 40) {
+          setStatusMessage(`Adding ${filter.displayName} filter...`);
         } else if (prev < 60) {
-          setStatusMessage("Removing background...");
-        } else {
-          setStatusMessage("Enhancing quality...");
+          setStatusMessage(textOverlay ? "Overlaying your text..." : "Creating Polaroid border...");
+        } else if (prev < 80) {
+          setStatusMessage("Creating Polaroid border...");
+        } else if (isDualMode) {
+          setStatusMessage("Processing second photo...");
         }
         
         return prev + 10;
@@ -50,98 +70,93 @@ const Step4Processing = ({
     }, 300);
 
     try {
-      console.log("🎨 Starting image processing...");
-      console.log(`   Image ID: ${imageId}`);
-      console.log(`   Crop data:`, cropData);
+      console.log("🎨 Starting Polaroid processing...");
       
-      // Process with passport mode (40% enhancement) - no parameters needed
-      const response = await apiService.processPhoto(
+      // Generate processed URL for first photo using Cloudinary transformations
+      const processedUrl1 = cloudinaryService.generateProcessedUrl(
         imageId,
-        cropData || undefined
+        cropData,
+        rotation,
+        filter,
+        textOverlay || undefined
       );
-      
+
+      console.log("✅ First photo processed:", processedUrl1);
+
+      let processedUrl2: string | undefined;
+
+      if (isDualMode && secondImageId && secondCropData && secondRotation) {
+        // Generate processed URL for second photo
+        processedUrl2 = cloudinaryService.generateProcessedUrl(
+          secondImageId,
+          secondCropData,
+          secondRotation,
+          secondFilter || filter,
+          secondTextOverlay || undefined
+        );
+
+        console.log("✅ Second photo processed:", processedUrl2);
+      }
+
       clearInterval(progressInterval);
       setProgress(100);
       setStatusMessage("Complete!");
-      
-      if (response.success && response.data) {
-        console.log("✅ Processing successful");
-        console.log(`   Response:`, response.data);
-        
-        // CRITICAL FIX: Extract images and processed ID from response
-        const beforeImage = response.data.before_image || response.data.processed_image;
-        const afterImage = response.data.after_image || response.data.processed_image;
-        
-        // CRITICAL FIX: Use the standardized image_id from response
-        // This ensures the preview/print steps use the correct file
-        const processedImageId = response.data.image_id || imageId;
-        
-        console.log("📋 Processing complete:");
-        console.log(`   Original ID: ${imageId}`);
-        console.log(`   Processed ID: ${processedImageId}`);
-        console.log(`   Before image: ${beforeImage ? beforeImage.substring(0, 50) + '...' : 'none'}`);
-        console.log(`   After image: ${afterImage ? afterImage.substring(0, 50) + '...' : 'none'}`);
-        
-        // Validate we have both images
-        if (!beforeImage || !afterImage) {
-          throw new Error("Missing before or after image in response");
-        }
-        
-        // CRITICAL FIX: Validate the processed ID exists
-        if (!processedImageId) {
-          throw new Error("No processed image ID returned from server");
-        }
-        
-        // Wait 500ms before showing results
-        setTimeout(() => {
-          onProcessingComplete(beforeImage, afterImage, processedImageId);
-        }, 500);
-      } else {
-        throw new Error(response.error || "Processing failed");
-      }
+
+      // Wait 500ms before showing results
+      setTimeout(() => {
+        onProcessingComplete(processedUrl1, processedUrl2);
+      }, 500);
+
     } catch (error) {
       clearInterval(progressInterval);
       console.error("❌ Processing error:", error);
       
-      // Show detailed error message
-      let errorMessage = "Please try again";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
       toast({
         title: "Processing failed",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
-      
-      // Log detailed error info for debugging
-      console.error("Detailed error info:");
-      console.error(`   Image ID: ${imageId}`);
-      console.error(`   Crop data:`, cropData);
-      console.error(`   Error:`, error);
     }
   };
 
   return (
     <div className="h-[calc(100vh-180px)] flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
+      <div className="text-center max-w-md w-full">
         {/* Circular Progress Indicator */}
         <div className="w-32 h-32 mx-auto mb-8 relative">
-          <div className="w-full h-full border-8 border-primary/20 rounded-full" />
-          <div 
-            className="absolute inset-0 border-8 border-primary border-t-transparent rounded-full animate-spin"
-            style={{
-              animationDuration: "1s"
-            }}
-          />
+          <svg className="w-full h-full" viewBox="0 0 100 100">
+            {/* Background circle */}
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="8"
+              className="text-primary/20"
+            />
+            {/* Progress circle */}
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="8"
+              strokeLinecap="round"
+              className="text-primary transition-all duration-300"
+              strokeDasharray={`${2 * Math.PI * 45}`}
+              strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
+              transform="rotate(-90 50 50)"
+            />
+          </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-bold text-primary">{progress}%</span>
+            <span className="text-3xl font-bold text-primary">{progress}%</span>
           </div>
         </div>
         
         <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-          Creating your passport photo...
+          Creating your Polaroid{secondImageId ? "s" : ""}...
         </h2>
         
         <div className="w-full bg-secondary rounded-full h-3 overflow-hidden mb-4">
@@ -156,7 +171,7 @@ const Step4Processing = ({
         </p>
         
         <p className="text-sm text-muted-foreground/70">
-          Using professional passport standards
+          Using professional photo standards
         </p>
       </div>
     </div>
