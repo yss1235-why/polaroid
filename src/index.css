@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Polaroid Design System */
 
 @layer base {
   :root {
@@ -50,20 +48,20 @@ All colors MUST be HSL.
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+    /* Polaroid specific dimensions */
+    --polaroid-photo-width: 780px;
+    --polaroid-photo-height: 1170px;
+    --polaroid-border-side: 22.5px;
+    --polaroid-border-top: 15px;
+    --polaroid-border-bottom: 117px;
+
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -101,6 +99,7 @@ All colors MUST be HSL.
     --border: 215 25% 22%;
     --input: 215 25% 20%;
     --ring: 204 85% 52%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -119,5 +118,160 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom Polaroid styles */
+@layer components {
+  .polaroid-frame {
+    @apply relative bg-white rounded-lg shadow-xl;
+    padding: var(--polaroid-border-side);
+    padding-top: var(--polaroid-border-top);
+    padding-bottom: var(--polaroid-border-bottom);
+  }
+
+  .polaroid-photo {
+    @apply aspect-[2/3] overflow-hidden rounded;
+  }
+
+  .polaroid-shadow {
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Filter grid animations */
+  .filter-card {
+    @apply transition-all duration-200;
+  }
+
+  .filter-card:hover {
+    @apply scale-105 shadow-lg;
+  }
+
+  /* Text customizer */
+  .text-preview-box {
+    @apply p-4 bg-white rounded-lg shadow-inner;
+    min-height: 100px;
+  }
+
+  /* Smooth transitions */
+  .smooth-transition {
+    transition: var(--transition-smooth);
+  }
+}
+
+/* Custom scrollbar for filter grid */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-muted rounded;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 rounded hover:bg-primary/50;
+  }
+
+  /* Loading animation */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .shimmer {
+    animation: shimmer 2s infinite;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    background-size: 1000px 100%;
+  }
+
+  /* Print sheet cut lines */
+  .cut-line {
+    border: 2px dashed theme('colors.gray.300');
+    border-radius: 4px;
+  }
+
+  /* Polaroid aspect ratio helper */
+  .aspect-polaroid {
+    aspect-ratio: 2 / 3;
+  }
+
+  .aspect-sheet {
+    aspect-ratio: 3 / 2; /* 4x6 landscape = 3:2 */
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Print styles (when printing the sheet) */
+@media print {
+  @page {
+    size: 4in 6in landscape;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .polaroid-shadow {
+    box-shadow: none;
   }
 }
