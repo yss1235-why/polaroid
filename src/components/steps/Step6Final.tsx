@@ -224,30 +224,38 @@ const Step6Final = ({
               className="relative bg-white shadow-2xl"
               style={{ 
                 width: '100%',
-                maxWidth: '1000px',
+                maxWidth: '600px',
                 aspectRatio: '3/2', // 4:6 = 2:3, landscape = 3:2
               }}
             >
-             {/* Grid layout for 2 Polaroids side by side */}
-              <div className="grid grid-cols-2 gap-3 p-4 h-full items-center">
+              {/* Grid layout for 2 Polaroids side by side */}
+              <div className="grid grid-cols-2 gap-4 p-8 h-full">
                 {/* Left Polaroid */}
-                <div className="relative flex items-center justify-center">
-                  <img
-                    src={leftPolaroidUrl}
-                    alt="Left Polaroid"
-                    className="w-full h-auto object-contain"
-                  />
+                <div className="relative">
+                  <div className="w-full h-full bg-white p-2 shadow-lg rounded polaroid-border-preview">
+                    <div className="aspect-[2/3] overflow-hidden rounded">
+                      <img
+                        src={leftPolaroidUrl}
+                        alt="Left Polaroid"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
                   {/* Cut line */}
                   <div className="absolute inset-0 border-2 border-dashed border-gray-300 rounded pointer-events-none" />
                 </div>
-              
+
                 {/* Right Polaroid */}
-                <div className="relative flex items-center justify-center">
-                  <img
-                    src={rightPolaroidUrl}
-                    alt="Right Polaroid"
-                    className="w-full h-auto object-contain"
-                  />
+                <div className="relative">
+                  <div className="w-full h-full bg-white p-2 shadow-lg rounded polaroid-border-preview">
+                    <div className="aspect-[2/3] overflow-hidden rounded">
+                      <img
+                        src={rightPolaroidUrl}
+                        alt="Right Polaroid"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
                   {/* Cut line */}
                   <div className="absolute inset-0 border-2 border-dashed border-gray-300 rounded pointer-events-none" />
                 </div>
