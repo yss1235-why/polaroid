@@ -10,6 +10,7 @@ import Step5BeforeAfter from "@/components/steps/Step5BeforeAfter";
 import Step6Final from "@/components/steps/Step6Final";
 import StepNavigation from "@/components/StepNavigation";
 import { PhotoData, CropData, RotationData, FilterType, TextOverlay } from "@/types";
+import { cloudinaryService } from "@/services/cloudinary";
 
 const Index = () => {
   const { toast } = useToast();
@@ -23,6 +24,8 @@ const Index = () => {
     secondImageId: undefined,
     secondOriginal: null,
     secondProcessed: null,
+    croppedOnly: null,
+    secondCroppedOnly: null,
   });
 
   // Processing data
@@ -63,6 +66,8 @@ const Index = () => {
       secondImageId: undefined,
       secondOriginal: null,
       secondProcessed: null,
+      croppedOnly: null,
+      secondCroppedOnly: null,
     });
     setCropData(null);
     setRotation({ angle: 0 });
@@ -111,6 +116,37 @@ const Index = () => {
       setSecondCropData(secondCrop);
       setSecondRotation(secondRot);
     }
+
+    // Generate cropped-only URLs for before/after preview
+    if (photoData.imageId) {
+      const croppedOnlyUrl = cloudinaryService.generateCroppedOnlyUrl(
+        photoData.imageId,
+        crop,
+        rot
+      );
+      console.log("📸 Cropped-only URL generated:", croppedOnlyUrl);
+      
+      setPhotoData(prev => ({
+        ...prev,
+        croppedOnly: croppedOnlyUrl,
+      }));
+
+      // If dual mode, generate second cropped-only URL
+      if (photoData.secondImageId && secondCrop && secondRot) {
+        const secondCroppedOnlyUrl = cloudinaryService.generateCroppedOnlyUrl(
+          photoData.secondImageId,
+          secondCrop,
+          secondRot
+        );
+        console.log("📸 Second cropped-only URL generated:", secondCroppedOnlyUrl);
+        
+        setPhotoData(prev => ({
+          ...prev,
+          secondCroppedOnly: secondCroppedOnlyUrl,
+        }));
+      }
+    }
+
     handleNext();
   };
 
@@ -213,9 +249,9 @@ const Index = () => {
       case 6:
         return (
           <Step5BeforeAfter
-            originalImage={photoData.original!}
+            originalImage={photoData.croppedOnly!}
             processedImage={photoData.processed!}
-            secondOriginalImage={photoData.secondOriginal || undefined}
+            secondOriginalImage={photoData.secondCroppedOnly || undefined}
             secondProcessedImage={photoData.secondProcessed || undefined}
             onContinue={handleNext}
             onRetake={handleRetake}
@@ -244,38 +280,4 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-lg flex items-center justify-center">
-              <Camera className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-foreground">
-                Polaroid Photo Printer
-              </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                Create instant memories
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Progress Navigation */}
-      {currentStep > 1 && currentStep < 7 && (
-        <StepNavigation
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          onBack={handleBack}
-          mode="polaroid"
-        />
-      )}
-
-      {/* Main Content */}
-      <main className="container mx-auto">
-        {renderStep()}
-      </main>
-    </div>
-  );
-};
-
-export default Index;
+          <div className="flex
