@@ -327,5 +327,13 @@ class CloudinaryService {
     };
   }
 
-  /**
-   * Reset account rotation (for testing or
+ /**
+   * Reset account rotation (for testing or monthly reset)
+   */
+  resetAccounts() {
+    this.currentAccount = 1;
+    this.account1Failed = false;
+  }
+}
+
+export const cloudinaryService = new CloudinaryService();
