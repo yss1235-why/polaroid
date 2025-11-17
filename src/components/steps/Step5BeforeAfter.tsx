@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Upload } from "lucide-react";
+import { ArrowRight, Upload, Loader2 } from "lucide-react";
 
 interface Step5BeforeAfterProps {
   originalImage: string;
@@ -23,8 +23,30 @@ const Step5BeforeAfter = ({
   const [isDragging, setIsDragging] = useState(false);
   const [activeComparison, setActiveComparison] = useState<"first" | "second">("first");
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Image loading states
+  const [beforeLoaded, setBeforeLoaded] = useState(false);
+  const [afterLoaded, setAfterLoaded] = useState(false);
+  const [imagesReady, setImagesReady] = useState(false);
 
   const isDualMode = !!secondOriginalImage && !!secondProcessedImage;
+
+  // Check if both images are loaded
+  useEffect(() => {
+    if (beforeLoaded && afterLoaded) {
+      // Add a small delay to ensure images are fully rendered
+      setTimeout(() => {
+        setImagesReady(true);
+      }, 300);
+    }
+  }, [beforeLoaded, afterLoaded]);
+
+  // Reset loading states when switching photos in dual mode
+  useEffect(() => {
+    setBeforeLoaded(false);
+    setAfterLoaded(false);
+    setImagesReady(false);
+  }, [activeComparison]);
 
   const updatePosition = (clientX: number) => {
     if (!containerRef.current) return;
@@ -75,6 +97,26 @@ const Step5BeforeAfter = ({
   const currentOriginal = activeComparison === "first" ? originalImage : secondOriginalImage!;
   const currentProcessed = activeComparison === "first" ? processedImage : secondProcessedImage!;
 
+  const handleBeforeLoad = () => {
+    console.log("✅ Before image loaded");
+    setBeforeLoaded(true);
+  };
+
+  const handleAfterLoad = () => {
+    console.log("✅ After image loaded");
+    setAfterLoaded(true);
+  };
+
+  const handleBeforeError = () => {
+    console.error("❌ Before image failed to load");
+    setBeforeLoaded(true); // Continue anyway to avoid blocking
+  };
+
+  const handleAfterError = () => {
+    console.error("❌ After image failed to load");
+    setAfterLoaded(true); // Continue anyway to avoid blocking
+  };
+
   return (
     <div className="h-[calc(100vh-180px)] flex flex-col">
       {/* Header */}
@@ -115,9 +157,26 @@ const Step5BeforeAfter = ({
 
       {/* Comparison Slider */}
       <div className="flex-1 relative">
+        {/* Loading Overlay */}
+        {!imagesReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted z-50">
+            <div className="text-center">
+              <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-lg font-semibold text-foreground mb-2">
+                Loading images from Cloudinary...
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This may take a few seconds
+              </p>
+            </div>
+          </div>
+        )}
+
         <div
           ref={containerRef}
-          className="relative h-full rounded-lg overflow-hidden cursor-col-resize select-none border border-border shadow-lg touch-none bg-muted"
+          className={`relative h-full rounded-lg overflow-hidden cursor-col-resize select-none border border-border shadow-lg touch-none bg-muted transition-opacity duration-300 ${
+            imagesReady ? 'opacity-100' : 'opacity-0'
+          }`}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleEnd}
@@ -132,18 +191,22 @@ const Step5BeforeAfter = ({
             alt="Cropped photo without enhancements"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             draggable={false}
+            onLoad={handleBeforeLoad}
+            onError={handleBeforeError}
           />
 
-          {/* Processed Image with Clip (Enhanced Polaroid) */}
+          {/* Processed Image with Clip (Enhanced Photo - NO Polaroid Frame) */}
           <div
             className="absolute inset-0 overflow-hidden"
             style={{ clipPath: `inset(0 ${100 - dividerPosition}% 0 0)` }}
           >
             <img
               src={currentProcessed}
-              alt="Enhanced Polaroid"
+              alt="Enhanced photo with filters"
               className="absolute inset-0 w-full h-full object-contain pointer-events-none"
               draggable={false}
+              onLoad={handleAfterLoad}
+              onError={handleAfterError}
             />
           </div>
 
@@ -176,15 +239,30 @@ const Step5BeforeAfter = ({
 
       {/* Action Buttons */}
       <div className="p-4 space-y-3 bg-card border-t border-border">
-        <Button onClick={onContinue} className="w-full gap-2" size="lg">
-          Continue to Print
-          <ArrowRight className="w-5 h-5" />
+        <Button 
+          onClick={onContinue} 
+          disabled={!imagesReady}
+          className="w-full gap-2" 
+          size="lg"
+        >
+          {imagesReady ? (
+            <>
+              Continue to Print
+              <ArrowRight className="w-5 h-5" />
+            </>
+          ) : (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Loading images...
+            </>
+          )}
         </Button>
         <Button
           onClick={onRetake}
           variant="outline"
           className="w-full gap-2"
           size="lg"
+          disabled={!imagesReady}
         >
           <Upload className="w-5 h-5" />
           Start Over
