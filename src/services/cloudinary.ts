@@ -130,6 +130,41 @@ class CloudinaryService {
   }
 
   /**
+   * NEW: Generate cropped-only URL for "before" preview
+   * This creates JUST the cropped and rotated image with NO filters, borders, or enhancements
+   */
+  generateCroppedOnlyUrl(
+    publicId: string,
+    cropData: CropData,
+    rotation: RotationData
+  ): string {
+    const credentials = this.getCurrentCredentials();
+    const transformations: string[] = [];
+
+    // Step 1: Crop the original image
+    const cropX = Math.round(cropData.x * cropData.naturalWidth);
+    const cropY = Math.round(cropData.y * cropData.naturalHeight);
+    const cropW = Math.round(cropData.width * cropData.naturalWidth);
+    const cropH = Math.round(cropData.height * cropData.naturalHeight);
+    transformations.push(`c_crop,x_${cropX},y_${cropY},w_${cropW},h_${cropH}`);
+
+    // Step 2: Rotation if provided
+    if (rotation && rotation.angle !== 0) {
+      transformations.push(`a_${rotation.angle}`);
+    }
+
+    // Step 3: Resize to Polaroid photo dimensions (2:3 aspect ratio)
+    transformations.push(`c_fill,w_${POLAROID_DIMS.PHOTO_WIDTH},h_${POLAROID_DIMS.PHOTO_HEIGHT},g_auto`);
+
+    // Step 4: Basic quality settings
+    transformations.push('q_90');
+    transformations.push('f_auto');
+
+    const transformString = transformations.join('/');
+    return `https://res.cloudinary.com/${credentials.cloudName}/image/upload/${transformString}/${publicId}`;
+  }
+
+  /**
    * Generate processed Polaroid image URL with proper structure
    * Creates authentic Polaroid with white borders and text in bottom area
    */
@@ -327,7 +362,7 @@ class CloudinaryService {
     };
   }
 
- /**
+  /**
    * Reset account rotation (for testing or monthly reset)
    */
   resetAccounts() {
