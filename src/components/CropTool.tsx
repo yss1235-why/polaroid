@@ -224,14 +224,11 @@ export const CropTool = ({
             <div className="absolute left-1/3 top-0 bottom-0 w-px bg-primary/30" />
             <div className="absolute left-2/3 top-0 bottom-0 w-px bg-primary/30" />
             
-            {/* White border preview at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-white/20 border-t border-primary/50">
-              <div className="text-xs text-center text-white/60 mt-2">Text area</div>
-            </div>
+            {/* Text area removed - borders added by Cloudinary later */}
           </div>
 
-          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
-            {!imageLoaded ? "Loading..." : "Drag to position"}
+         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
+            {!imageLoaded ? "Loading..." : "Crop your photo - borders added automatically"}
           </div>
         </div>
       </div>
