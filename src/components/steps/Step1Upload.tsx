@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cloudinaryService } from "@/services/cloudinary";
+import { apiService } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { validateImageDimensions, formatFileSize } from "@/utils/polaroidHelpers";
 
@@ -81,16 +81,15 @@ const Step1Upload = ({ onUploadComplete }: Step1UploadProps) => {
     }
   };
 
-  const handleSingleUpload = async (file: File) => {
+  const handleSingleUpload = async (file: File, preview: string) => {
     setIsProcessing(true);
 
     try {
-      const response = await cloudinaryService.uploadImage(file);
+      const response = await apiService.uploadImage(file);
       
       if (response.success && response.data) {
-        const imageUrl = URL.createObjectURL(file);
         // Single photo - will be duplicated for both Polaroids
-        onUploadComplete(imageUrl, response.data.public_id);
+        onUploadComplete(preview, response.data.image_id);
       } else {
         throw new Error(response.error || "Upload failed");
       }
@@ -120,22 +119,22 @@ const Step1Upload = ({ onUploadComplete }: Step1UploadProps) => {
 
     try {
       // Upload left photo
-      const leftResponse = await cloudinaryService.uploadImage(leftPhoto.file);
+      const leftResponse = await apiService.uploadImage(leftPhoto.file);
       if (!leftResponse.success || !leftResponse.data) {
         throw new Error("Left photo upload failed");
       }
 
       // Upload right photo
-      const rightResponse = await cloudinaryService.uploadImage(rightPhoto.file);
+      const rightResponse = await apiService.uploadImage(rightPhoto.file);
       if (!rightResponse.success || !rightResponse.data) {
         throw new Error("Right photo upload failed");
       }
 
       onUploadComplete(
         leftPhoto.preview,
-        leftResponse.data.public_id,
+        leftResponse.data.image_id,
         rightPhoto.preview,
-        rightResponse.data.public_id
+        rightResponse.data.image_id
       );
     } catch (error) {
       console.error("Upload error:", error);
@@ -151,7 +150,7 @@ const Step1Upload = ({ onUploadComplete }: Step1UploadProps) => {
 
   const handleContinue = () => {
     if (uploadMode === "single" && leftPhoto) {
-      handleSingleUpload(leftPhoto.file);
+      handleSingleUpload(leftPhoto.file, leftPhoto.preview);
     } else if (uploadMode === "dual") {
       handleDualUpload();
     }
