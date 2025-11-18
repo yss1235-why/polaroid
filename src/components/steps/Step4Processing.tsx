@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { cloudinaryService } from "@/services/cloudinary";
+import { apiService } from "@/services/api";
 import { CropData, RotationData, FilterType, TextOverlay } from "@/types";
 
 interface Step4ProcessingProps {
@@ -56,11 +56,11 @@ const Step4Processing = ({
         
         // Update status message based on progress
         if (prev < 20) {
-          setStatusMessage(isDualMode ? "Processing first photo..." : "Applying auto-enhancement...");
+          setStatusMessage(isDualMode ? "Processing first photo..." : "Sending to backend...");
         } else if (prev < 40) {
-          setStatusMessage(`Adding ${filter.displayName} filter...`);
+          setStatusMessage(`Applying ${filter.displayName} filter...`);
         } else if (prev < 60) {
-          setStatusMessage(textOverlay ? "Overlaying your text..." : "Creating Polaroid border...");
+          setStatusMessage(textOverlay ? "Adding your text..." : "Creating Polaroid border...");
         } else if (prev < 80) {
           setStatusMessage("Creating Polaroid border...");
         } else if (isDualMode) {
@@ -72,54 +72,28 @@ const Step4Processing = ({
     }, 300);
 
     try {
-      console.log("🎨 Starting Polaroid processing...");
+      console.log("🎨 Starting backend processing...");
       
-      // Generate ENHANCED photo URL (for before/after comparison - NO frame)
-      const enhancedUrl1 = cloudinaryService.generateEnhancedPhotoUrl(
-        imageId,
-        cropData,
-        rotation,
-        filter
-      );
+      // Call backend API to process images
+      const response = await apiService.processImages({
+        left_image_id: imageId,
+        left_crop: cropData,
+        left_rotation: rotation.angle,
+        left_filter: filter.name,
+        left_text: textOverlay || undefined,
+        right_image_id: secondImageId || imageId,
+        right_crop: secondCropData || cropData,
+        right_rotation: secondRotation?.angle || rotation.angle,
+        right_filter: secondFilter?.name || filter.name,
+        right_text: secondTextOverlay || textOverlay || undefined,
+      });
 
-      console.log("✅ First enhanced photo URL:", enhancedUrl1);
-
-      // Generate full PROCESSED Polaroid URL (with frame and text for final print)
-      const processedUrl1 = cloudinaryService.generateProcessedUrl(
-        imageId,
-        cropData,
-        rotation,
-        filter,
-        textOverlay || undefined
-      );
-
-      console.log("✅ First Polaroid processed:", processedUrl1);
-
-      let processedUrl2: string | undefined;
-      let enhancedUrl2: string | undefined;
-
-      if (isDualMode && secondImageId && secondCropData && secondRotation) {
-        // Generate enhanced URL for second photo
-        enhancedUrl2 = cloudinaryService.generateEnhancedPhotoUrl(
-          secondImageId,
-          secondCropData,
-          secondRotation,
-          secondFilter || filter
-        );
-
-        console.log("✅ Second enhanced photo URL:", enhancedUrl2);
-
-        // Generate processed URL for second photo
-        processedUrl2 = cloudinaryService.generateProcessedUrl(
-          secondImageId,
-          secondCropData,
-          secondRotation,
-          secondFilter || filter,
-          secondTextOverlay || undefined
-        );
-
-        console.log("✅ Second Polaroid processed:", processedUrl2);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Processing failed");
       }
+
+      console.log("✅ Backend processing complete");
+      console.log("Job ID:", response.data.job_id);
 
       clearInterval(progressInterval);
       setProgress(100);
@@ -127,7 +101,12 @@ const Step4Processing = ({
 
       // Wait 500ms before showing results
       setTimeout(() => {
-        onProcessingComplete(processedUrl1, enhancedUrl1, processedUrl2, enhancedUrl2);
+        onProcessingComplete(
+          response.data!.left_polaroid,
+          response.data!.left_enhanced,
+          response.data!.right_polaroid,
+          response.data!.right_enhanced
+        );
       }, 500);
 
     } catch (error) {
@@ -194,7 +173,7 @@ const Step4Processing = ({
         </p>
         
         <p className="text-sm text-muted-foreground/70">
-          Using professional photo standards
+          Backend is processing your photos
         </p>
       </div>
     </div>
