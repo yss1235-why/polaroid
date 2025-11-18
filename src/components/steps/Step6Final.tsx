@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cloudinaryService } from "@/services/cloudinary";
 
 interface Step6FinalProps {
   leftPolaroidUrl: string;
@@ -31,7 +30,8 @@ const Step6Final = ({
   onRetake 
 }: Step6FinalProps) => {
   const { toast } = useToast();
-  const [sheetPreviewUrl, setSheetPreviewUrl] = useState<string | null>(null);
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+  const [sheetPath, setSheetPath] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -39,7 +39,7 @@ const Step6Final = ({
   const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
 
   useEffect(() => {
-    generateSheetPreview();
+    generateSheet();
     
     // Countdown timer
     const interval = setInterval(() => {
@@ -49,25 +49,30 @@ const Step6Final = ({
     return () => clearInterval(interval);
   }, []);
 
-  const generateSheetPreview = async () => {
+  const generateSheet = async () => {
     setIsGenerating(true);
     
     try {
-      // For now, create a simple composite preview URL
-      // In production, you might want to create an actual composite image
-      // using Cloudinary's overlay features or generate it server-side
+      console.log("📄 Generating print sheet via backend...");
       
-      // Since we have the processed Polaroid URLs, we'll use them directly
-      setSheetPreviewUrl(leftPolaroidUrl); // Placeholder - show first polaroid
+      const response = await apiService.generateSheet(
+        leftPolaroidUrl,
+        rightPolaroidUrl
+      );
       
-      console.log("Sheet preview generated");
-      console.log("Left Polaroid:", leftPolaroidUrl);
-      console.log("Right Polaroid:", rightPolaroidUrl);
+      if (response.success && response.data) {
+        const fullUrl = apiService.getSheetUrl(response.data.sheet_url);
+        setSheetUrl(fullUrl);
+        setSheetPath(response.data.sheet_path);
+        console.log("✅ Sheet generated:", fullUrl);
+      } else {
+        throw new Error(response.error || "Sheet generation failed");
+      }
       
     } catch (error) {
       console.error("Preview error:", error);
       toast({
-        title: "Preview generation failed",
+        title: "Sheet generation failed",
         description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
@@ -80,18 +85,26 @@ const Step6Final = ({
     setIsPrinting(true);
 
     try {
-      // Send both Polaroid URLs to Raspberry Pi for printing
-      const response = await apiService.printSheet(leftPolaroidUrl, 1);
+      console.log("🖨️ Sending print job to backend...");
+      
+      const response = await apiService.printSheet({
+        sheet_path: sheetPath || undefined,
+        left_polaroid_url: leftPolaroidUrl,
+        right_polaroid_url: rightPolaroidUrl,
+        copies: 1
+      });
 
       if (response.success && response.data) {
         toast({
           title: "✅ Print job sent",
-          description: `Printing to ${response.data.printer_name}`,
+          description: `Printing${response.data.printer_name ? ` to ${response.data.printer_name}` : ''}`,
         });
         onPrint();
         
         // Monitor print status
-        monitorPrintStatus(response.data.job_id);
+        if (response.data.job_id) {
+          monitorPrintStatus(response.data.job_id);
+        }
       } else {
         throw new Error(response.error || "Print job failed");
       }
@@ -143,10 +156,10 @@ const Step6Final = ({
     setIsDeleting(true);
 
     try {
-      // Delete both images from Cloudinary
+      // Delete both images from backend (which deletes from Cloudinary)
       const deletePromises = [
-        cloudinaryService.deleteImage(leftImageId),
-        rightImageId !== leftImageId ? cloudinaryService.deleteImage(rightImageId) : Promise.resolve({ success: true })
+        apiService.deleteImage(leftImageId),
+        rightImageId !== leftImageId ? apiService.deleteImage(rightImageId) : Promise.resolve({ success: true })
       ];
 
       const results = await Promise.all(deletePromises);
@@ -209,70 +222,30 @@ const Step6Final = ({
       </div>
 
       {/* Sheet Preview */}
-      <div className="flex-1 relative overflow-hidden bg-white p-4">
+      <div className="flex-1 relative overflow-hidden bg-muted p-4">
         {isGenerating ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Preparing print sheet...</p>
+              <p className="text-muted-foreground">Generating print sheet from backend...</p>
             </div>
           </div>
-        ) : (
+        ) : sheetUrl ? (
           <div className="w-full h-full flex items-center justify-center">
-            {/* Sheet Layout Preview - 4x6 landscape */}
-            <div 
-              className="relative bg-white shadow-2xl"
-              style={{ 
-                width: '100%',
-                maxWidth: '600px',
-                aspectRatio: '3/2', // 4:6 = 2:3, landscape = 3:2
-              }}
-            >
-              {/* Grid layout for 2 Polaroids side by side */}
-              <div className="grid grid-cols-2 gap-4 p-8 h-full">
-                {/* Left Polaroid */}
-                <div className="relative">
-                  <div className="w-full h-full bg-white p-2 shadow-lg rounded polaroid-border-preview">
-                    <div className="aspect-[2/3] overflow-hidden rounded">
-                      <img
-                        src={leftPolaroidUrl}
-                        alt="Left Polaroid"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  {/* Cut line */}
-                  <div className="absolute inset-0 border-2 border-dashed border-gray-300 rounded pointer-events-none" />
-                </div>
-
-                {/* Right Polaroid */}
-                <div className="relative">
-                  <div className="w-full h-full bg-white p-2 shadow-lg rounded polaroid-border-preview">
-                    <div className="aspect-[2/3] overflow-hidden rounded">
-                      <img
-                        src={rightPolaroidUrl}
-                        alt="Right Polaroid"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  {/* Cut line */}
-                  <div className="absolute inset-0 border-2 border-dashed border-gray-300 rounded pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Vertical Branding on Right Side */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <p className="text-gray-400 text-xs font-serif italic vertical-text tracking-wider">
-                  Innovative Archive
-                </p>
-              </div>
-            </div>
+            <img
+              src={sheetUrl}
+              alt="Print sheet preview"
+              className="max-w-full max-h-full object-contain rounded shadow-2xl"
+            />
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <p className="text-destructive">Failed to generate sheet</p>
           </div>
         )}
 
         {/* Instructions Overlay */}
-        {!isGenerating && (
+        {!isGenerating && sheetUrl && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
             ✂️ Cut along dashed lines
           </div>
@@ -283,7 +256,7 @@ const Step6Final = ({
       <div className="p-4 space-y-3 bg-card border-t border-border">
         <Button 
           onClick={handlePrint}
-          disabled={isGenerating || isPrinting}
+          disabled={isGenerating || isPrinting || !sheetUrl}
           className="w-full gap-2"
           size="lg"
         >
@@ -297,6 +270,7 @@ const Step6Final = ({
             variant="destructive"
             className="gap-2"
             size="lg"
+            disabled={isGenerating}
           >
             <Trash2 className="w-5 h-5" />
             Delete Now
@@ -307,6 +281,7 @@ const Step6Final = ({
             variant="outline"
             className="gap-2"
             size="lg"
+            disabled={isGenerating}
           >
             <Upload className="w-5 h-5" />
             Start Over
