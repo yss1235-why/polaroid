@@ -10,7 +10,6 @@ import Step5BeforeAfter from "@/components/steps/Step5BeforeAfter";
 import Step6Final from "@/components/steps/Step6Final";
 import StepNavigation from "@/components/StepNavigation";
 import { PhotoData, CropData, RotationData, FilterType, TextOverlay } from "@/types";
-import { cloudinaryService } from "@/services/cloudinary";
 
 const Index = () => {
   const { toast } = useToast();
@@ -119,36 +118,6 @@ const Index = () => {
     if (secondCrop && secondRot) {
       setSecondCropData(secondCrop);
       setSecondRotation(secondRot);
-    }
-
-    // Generate cropped-only URLs for before/after preview
-    if (photoData.imageId) {
-      const croppedOnlyUrl = cloudinaryService.generateCroppedOnlyUrl(
-        photoData.imageId,
-        crop,
-        rot
-      );
-      console.log("📸 Cropped-only URL generated:", croppedOnlyUrl);
-      
-      setPhotoData(prev => ({
-        ...prev,
-        croppedOnly: croppedOnlyUrl,
-      }));
-
-      // If dual mode, generate second cropped-only URL
-      if (photoData.secondImageId && secondCrop && secondRot) {
-        const secondCroppedOnlyUrl = cloudinaryService.generateCroppedOnlyUrl(
-          photoData.secondImageId,
-          secondCrop,
-          secondRot
-        );
-        console.log("📸 Second cropped-only URL generated:", secondCroppedOnlyUrl);
-        
-        setPhotoData(prev => ({
-          ...prev,
-          secondCroppedOnly: secondCroppedOnlyUrl,
-        }));
-      }
     }
 
     handleNext();
@@ -262,9 +231,9 @@ const Index = () => {
       case 6:
         return (
           <Step5BeforeAfter
-            originalImage={photoData.croppedOnly!}
+            originalImage={photoData.original!}
             processedImage={photoData.enhancedOnly!}
-            secondOriginalImage={photoData.secondCroppedOnly || undefined}
+            secondOriginalImage={photoData.secondOriginal || undefined}
             secondProcessedImage={photoData.secondEnhancedOnly || undefined}
             onContinue={handleNext}
             onRetake={handleRetake}
