@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { CLOUDINARY_FILTERS, FilterType } from "@/types";
-import { cloudinaryService } from "@/services/cloudinary";
+import { apiService } from "@/services/api";
 import { Loader2 } from "lucide-react";
 
 interface FilterGridProps {
@@ -14,13 +14,39 @@ export const FilterGrid = ({ imageId, selectedFilter, onFilterSelect }: FilterGr
   const [previewUrls, setPreviewUrls] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    // Generate preview URLs for all filters
-    const urls = new Map<string, string>();
-    CLOUDINARY_FILTERS.forEach(filter => {
-      const url = cloudinaryService.generateFilterPreviewUrl(imageId, filter);
-      urls.set(filter.name, url);
-    });
-    setPreviewUrls(urls);
+    // Generate preview URLs from backend
+    const loadPreviews = async () => {
+      const urls = new Map<string, string>();
+      
+      for (const filter of CLOUDINARY_FILTERS) {
+        try {
+          setLoadingFilters(prev => new Set(prev).add(filter.name));
+          
+          const response = await apiService.getPreview(imageId, filter.name);
+          
+          if (response.success && response.data) {
+            urls.set(filter.name, response.data.preview_url);
+          }
+          
+          setLoadingFilters(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(filter.name);
+            return newSet;
+          });
+        } catch (error) {
+          console.error(`Failed to load preview for ${filter.name}:`, error);
+          setLoadingFilters(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(filter.name);
+            return newSet;
+          });
+        }
+      }
+      
+      setPreviewUrls(urls);
+    };
+
+    loadPreviews();
   }, [imageId]);
 
   const handleImageLoad = (filterName: string) => {
@@ -74,6 +100,13 @@ export const FilterGrid = ({ imageId, selectedFilter, onFilterSelect }: FilterGr
                     </div>
                   )}
                 </>
+              )}
+              
+              {/* Loading state if no URL yet */}
+              {!previewUrl && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
               )}
               
               {/* Selected Indicator */}
