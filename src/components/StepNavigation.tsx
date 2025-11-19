@@ -13,8 +13,8 @@ const getStepLabel = (step: number): string => {
   const labels: { [key: number]: string } = {
     1: "Upload Photo(s)",
     2: "Crop & Rotate",
-    3: "Choose Filter",
-    4: "Add Text",
+    3: "Add Text", // SWAPPED: Text is now step 3
+    4: "Choose Filter", // SWAPPED: Filter is now step 4
     5: "Processing",
     6: "Compare Results",
     7: "Print Preview",
