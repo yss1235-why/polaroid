@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, SkipForward } from "lucide-react";
+import { ArrowRight, SkipForward, Loader2 } from "lucide-react";
 import { TextOverlay } from "@/types";
 import { TextCustomizer } from "@/components/TextCustomizer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Step3_5TextProps {
   onTextComplete: (text: TextOverlay | null, secondText?: TextOverlay | null) => void;
@@ -95,6 +96,16 @@ const Step3_5Text = ({ onTextComplete, isDualMode = false }: Step3_5TextProps) =
             </div>
           </>
         )}
+
+        {/* Pre-loading Notice */}
+        <Alert className="mt-4 bg-primary/10 border-primary/20">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription className="text-sm">
+            <strong>Filters are loading in the background</strong>
+            <br />
+            Take your time adding text - filters will be ready when you continue!
+          </AlertDescription>
+        </Alert>
       </div>
 
       {/* Text Customizer */}
@@ -139,10 +150,15 @@ const Step3_5Text = ({ onTextComplete, isDualMode = false }: Step3_5TextProps) =
           >
             {isDualMode && !sameTextForBoth && currentPhoto === "first" 
               ? "Next Photo" 
-              : "Continue"}
+              : "Continue to Filters"}
             <ArrowRight className="w-5 h-5" />
           </Button>
         </div>
+
+        {/* Helpful tip */}
+        <p className="text-xs text-center text-muted-foreground pt-2">
+          💡 Tip: Longer text = more time for filters to load
+        </p>
       </div>
     </div>
   );
