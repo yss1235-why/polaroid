@@ -7,47 +7,59 @@ interface FilterGridProps {
   imageId: string;
   selectedFilter: FilterType | null;
   onFilterSelect: (filter: FilterType) => void;
+  preloadedUrls?: Map<string, string>; // NEW: Accept pre-loaded URLs
 }
 
-export const FilterGrid = ({ imageId, selectedFilter, onFilterSelect }: FilterGridProps) => {
+export const FilterGrid = ({ imageId, selectedFilter, onFilterSelect, preloadedUrls }: FilterGridProps) => {
   const [loadingFilters, setLoadingFilters] = useState<Set<string>>(new Set());
-  const [previewUrls, setPreviewUrls] = useState<Map<string, string>>(new Map());
+  const [previewUrls, setPreviewUrls] = useState<Map<string, string>>(preloadedUrls || new Map());
 
   useEffect(() => {
-    // Generate preview URLs from backend
-    const loadPreviews = async () => {
-      const urls = new Map<string, string>();
-      
-      for (const filter of CLOUDINARY_FILTERS) {
-        try {
-          setLoadingFilters(prev => new Set(prev).add(filter.name));
-          
-          const response = await apiService.getPreview(imageId, filter.name);
-          
-          if (response.success && response.data) {
-            urls.set(filter.name, response.data.preview_url);
-          }
-          
-          setLoadingFilters(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(filter.name);
-            return newSet;
-          });
-        } catch (error) {
-          console.error(`Failed to load preview for ${filter.name}:`, error);
-          setLoadingFilters(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(filter.name);
-            return newSet;
-          });
-        }
-      }
-      
-      setPreviewUrls(urls);
-    };
+    // If we have pre-loaded URLs, use them
+    if (preloadedUrls && preloadedUrls.size > 0) {
+      console.log(`✅ Using ${preloadedUrls.size} pre-loaded filter previews`);
+      setPreviewUrls(new Map(preloadedUrls));
+      return;
+    }
 
-    loadPreviews();
-  }, [imageId]);
+    // Otherwise, load them now (fallback)
+    console.log("⚠️ No pre-loaded URLs, loading now...");
+    loadPreviewsSequentially();
+  }, [imageId, preloadedUrls]);
+
+  const loadPreviewsSequentially = async () => {
+    const urls = new Map<string, string>();
+    
+    for (const filter of CLOUDINARY_FILTERS) {
+      try {
+        setLoadingFilters(prev => new Set(prev).add(filter.name));
+        
+        const response = await apiService.getPreview(imageId, filter.name);
+        
+        if (response.success && response.data) {
+          urls.set(filter.name, response.data.preview_url);
+          setPreviewUrls(new Map(urls)); // Update state after each load
+        }
+        
+        setLoadingFilters(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(filter.name);
+          return newSet;
+        });
+
+        // Small delay between requests to avoid congestion
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+      } catch (error) {
+        console.error(`Failed to load preview for ${filter.name}:`, error);
+        setLoadingFilters(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(filter.name);
+          return newSet;
+        });
+      }
+    }
+  };
 
   const handleImageLoad = (filterName: string) => {
     setLoadingFilters(prev => {
@@ -71,21 +83,22 @@ export const FilterGrid = ({ imageId, selectedFilter, onFilterSelect }: FilterGr
       {CLOUDINARY_FILTERS.map((filter) => {
         const isSelected = selectedFilter?.name === filter.name;
         const previewUrl = previewUrls.get(filter.name);
-        const isLoading = loadingFilters.has(filter.name);
+        const isLoading = loadingFilters.has(filter.name) || !previewUrl;
 
         return (
           <button
             key={filter.name}
             onClick={() => onFilterSelect(filter)}
+            disabled={!previewUrl} // Disable until loaded
             className={`relative rounded-lg overflow-hidden border-2 transition-all group ${
               isSelected
                 ? "border-primary shadow-lg scale-105"
                 : "border-border hover:border-primary/50 hover:scale-102"
-            }`}
+            } ${!previewUrl ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {/* Filter Preview Image */}
             <div className="aspect-[2/3] bg-muted relative">
-              {previewUrl && (
+              {previewUrl ? (
                 <>
                   <img
                     src={previewUrl}
@@ -100,10 +113,7 @@ export const FilterGrid = ({ imageId, selectedFilter, onFilterSelect }: FilterGr
                     </div>
                   )}
                 </>
-              )}
-              
-              {/* Loading state if no URL yet */}
-              {!previewUrl && (
+              ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
@@ -119,7 +129,9 @@ export const FilterGrid = ({ imageId, selectedFilter, onFilterSelect }: FilterGr
               )}
 
               {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+              {previewUrl && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+              )}
             </div>
 
             {/* Filter Name */}
